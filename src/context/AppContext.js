@@ -68,7 +68,7 @@ export const AppProvider = ({ children }) => {
   // Funções para manipular dívidas
   const addDebt = (debt) => {
     const id = debts.length > 0 ? Math.max(...debts.map(d => d.id)) + 1 : 1;
-    setDebts([...debts, { ...debt, id }]);
+    setDebts([...debts, { ...debt, id, isPaid: false }]);
   };
 
   const updateDebt = (id, updatedDebt) => {
@@ -84,7 +84,7 @@ export const AppProvider = ({ children }) => {
   // Funções para manipular contas fixas
   const addFixedBill = (bill) => {
     const id = fixedBills.length > 0 ? Math.max(...fixedBills.map(b => b.id)) + 1 : 1;
-    setFixedBills([...fixedBills, { ...bill, id }]);
+    setFixedBills([...fixedBills, { ...bill, id, isPaid: false }]);
   };
 
   const updateFixedBill = (id, updatedBill) => {
@@ -178,6 +178,52 @@ export const AppProvider = ({ children }) => {
     return categories;
   };
 
+  // Funções específicas para o calendário
+  const getBillsForDate = (date) => {
+    const dateString = date.toISOString().split('T')[0];
+    
+    const fixedBillsForDate = fixedBills
+      .filter(bill => bill.dueDate === dateString)
+      .map(bill => ({ ...bill, type: 'fixed' }));
+    
+    const debtsForDate = debts
+      .filter(debt => debt.dueDate === dateString)
+      .map(debt => ({ ...debt, type: 'debt' }));
+
+    return [...fixedBillsForDate, ...debtsForDate];
+  };
+
+  const getOverdueBills = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const overdueFixedBills = fixedBills
+      .filter(bill => !bill.isPaid && new Date(bill.dueDate) < today)
+      .map(bill => ({ ...bill, type: 'fixed' }));
+    
+    const overdueDebts = debts
+      .filter(debt => !debt.isPaid && new Date(debt.dueDate) < today)
+      .map(debt => ({ ...debt, type: 'debt' }));
+
+    return [...overdueFixedBills, ...overdueDebts];
+  };
+
+  const getUpcomingBills = (days = 7) => {
+    const today = new Date();
+    const futureDate = new Date();
+    futureDate.setDate(today.getDate() + days);
+    
+    const upcomingFixedBills = fixedBills
+      .filter(bill => !bill.isPaid && new Date(bill.dueDate) >= today && new Date(bill.dueDate) <= futureDate)
+      .map(bill => ({ ...bill, type: 'fixed' }));
+    
+    const upcomingDebts = debts
+      .filter(debt => !debt.isPaid && new Date(debt.dueDate) >= today && new Date(debt.dueDate) <= futureDate)
+      .map(debt => ({ ...debt, type: 'debt' }));
+
+    return [...upcomingFixedBills, ...upcomingDebts];
+  };
+
   // Valor fornecido pelo contexto
   const value = {
     expenses,
@@ -202,7 +248,10 @@ export const AppProvider = ({ children }) => {
     calculateTotalDebts,
     calculateTotalFixedBills,
     calculateTotalSavings,
-    getExpensesByCategory
+    getExpensesByCategory,
+    getBillsForDate,
+    getOverdueBills,
+    getUpcomingBills
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

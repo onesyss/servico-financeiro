@@ -1,17 +1,23 @@
 import React, { useState } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
 import { 
   HomeIcon, 
   CreditCardIcon, 
   BanknotesIcon, 
   ClipboardDocumentListIcon, 
   ArrowTrendingUpIcon,
+  CalendarIcon,
+  DocumentChartBarIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  SunIcon,
+  MoonIcon
 } from '@heroicons/react/24/outline';
 
 function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { isDarkMode, toggleTheme } = useTheme();
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -23,6 +29,8 @@ function Layout() {
     { name: 'Dívidas', path: '/debts', icon: BanknotesIcon },
     { name: 'Contas Fixas', path: '/fixed-bills', icon: ClipboardDocumentListIcon },
     { name: 'Economia', path: '/savings', icon: ArrowTrendingUpIcon },
+    { name: 'Calendário', path: '/calendar', icon: CalendarIcon },
+    { name: 'Relatórios', path: '/reports', icon: DocumentChartBarIcon },
   ];
 
   return (
@@ -33,9 +41,9 @@ function Layout() {
         ${sidebarOpen ? 'block' : 'hidden'}
       `}>
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={toggleSidebar}></div>
-        <div className="fixed inset-y-0 left-0 flex flex-col w-64 max-w-xs bg-white border-r border-gray-200">
-          <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-            <span className="text-xl font-semibold text-primary-600">ControlFin</span>
+        <div className="fixed inset-y-0 left-0 flex flex-col w-64 max-w-xs bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">
+            <span className="text-xl font-semibold text-primary-600 dark:text-primary-400">ControlFin</span>
             <button
               type="button"
               className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
@@ -52,8 +60,8 @@ function Layout() {
                 className={({ isActive }) => `
                   flex items-center px-4 py-2 text-sm font-medium rounded-md
                   ${isActive
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'text-gray-700 hover:bg-gray-100'}
+                    ? 'bg-primary-50 dark:bg-primary-900 text-primary-700 dark:text-primary-300'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}
                 `}
                 onClick={toggleSidebar}
               >
@@ -67,9 +75,9 @@ function Layout() {
 
       {/* Sidebar para desktop */}
       <div className="hidden lg:flex lg:flex-shrink-0">
-        <div className="flex flex-col w-64 border-r border-gray-200 bg-white">
-          <div className="flex items-center h-16 px-6 border-b border-gray-200">
-            <span className="text-xl font-semibold text-primary-600">ControlFin</span>
+        <div className="flex flex-col w-64 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div className="flex items-center h-16 px-6 border-b border-gray-200 dark:border-gray-700">
+            <span className="text-xl font-semibold text-primary-600 dark:text-primary-400">ControlFin</span>
           </div>
           <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
             {navItems.map((item) => (
@@ -79,8 +87,8 @@ function Layout() {
                 className={({ isActive }) => `
                   flex items-center px-4 py-2 text-sm font-medium rounded-md
                   ${isActive
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'text-gray-700 hover:bg-gray-100'}
+                    ? 'bg-primary-50 dark:bg-primary-900 text-primary-700 dark:text-primary-300'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}
                 `}
               >
                 <item.icon className="w-5 h-5 mr-3" />
@@ -94,24 +102,35 @@ function Layout() {
       {/* Conteúdo principal */}
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* Cabeçalho */}
-        <header className="flex items-center justify-between h-16 px-4 border-b border-gray-200 bg-white lg:px-6">
+        <header className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 lg:px-6">
           <button
             type="button"
-            className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 lg:hidden hover:text-gray-700 hover:bg-gray-100"
+            className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 dark:text-gray-400 lg:hidden hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
             onClick={toggleSidebar}
           >
             <Bars3Icon className="w-6 h-6" />
           </button>
           <div className="lg:hidden">
-            <span className="text-lg font-semibold text-primary-600">ControlFin</span>
+            <span className="text-lg font-semibold text-primary-600 dark:text-primary-400">ControlFin</span>
           </div>
-          <div className="flex items-center">
-            <span className="text-sm font-medium text-gray-700">Olá, Usuário</span>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+              title={isDarkMode ? 'Alternar para modo claro' : 'Alternar para modo escuro'}
+            >
+              {isDarkMode ? (
+                <SunIcon className="w-5 h-5" />
+              ) : (
+                <MoonIcon className="w-5 h-5" />
+              )}
+            </button>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Olá, Usuário</span>
           </div>
         </header>
 
         {/* Área de conteúdo */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-gray-50 dark:bg-gray-900">
           <Outlet />
         </main>
       </div>

@@ -125,8 +125,31 @@ function Dashboard() {
     plugins: {
       legend: {
         position: 'bottom',
+        labels: {
+          color: document.documentElement.classList.contains('dark') ? '#d1d5db' : '#374151',
+          usePointStyle: true,
+          padding: 20
+        }
       },
     },
+    scales: {
+      x: {
+        ticks: {
+          color: document.documentElement.classList.contains('dark') ? '#d1d5db' : '#374151'
+        },
+        grid: {
+          color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'
+        }
+      },
+      y: {
+        ticks: {
+          color: document.documentElement.classList.contains('dark') ? '#d1d5db' : '#374151'
+        },
+        grid: {
+          color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'
+        }
+      }
+    }
   };
 
   // Calcular totais
@@ -168,21 +191,21 @@ function Dashboard() {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
       
       {/* Cartões de resumo */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-white overflow-hidden shadow rounded-lg dashboard-card">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg dashboard-card">
           <div className="p-5">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-primary-100 rounded-md p-3">
-                <CalendarIcon className="h-6 w-6 text-primary-600" />
+              <div className="flex-shrink-0 bg-primary-100 dark:bg-primary-900/30 rounded-md p-3">
+                <CalendarIcon className="h-6 w-6 text-primary-600 dark:text-primary-400" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Gastos do Mês</dt>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Gastos do Mês</dt>
                   <dd className="flex items-baseline">
-                    <div className="text-2xl font-semibold text-gray-900">R$ {totalExpensesMonth.toFixed(2)}</div>
+                    <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">R$ {totalExpensesMonth.toFixed(2)}</div>
                   </dd>
                 </dl>
               </div>
@@ -190,17 +213,17 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg dashboard-card">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg dashboard-card">
           <div className="p-5">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-red-100 rounded-md p-3">
-                <CreditCardIcon className="h-6 w-6 text-red-600" />
+              <div className="flex-shrink-0 bg-red-100 dark:bg-red-900/30 rounded-md p-3">
+                <CreditCardIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total em Dívidas</dt>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total em Dívidas</dt>
                   <dd className="flex items-baseline">
-                    <div className="text-2xl font-semibold text-gray-900">R$ {totalDebts.toFixed(2)}</div>
+                    <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">R$ {totalDebts.toFixed(2)}</div>
                   </dd>
                 </dl>
               </div>
@@ -208,17 +231,17 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg dashboard-card">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg dashboard-card">
           <div className="p-5">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-yellow-100 rounded-md p-3">
-                <BanknotesIcon className="h-6 w-6 text-yellow-600" />
+              <div className="flex-shrink-0 bg-yellow-100 dark:bg-yellow-900/30 rounded-md p-3">
+                <BanknotesIcon className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Contas Fixas</dt>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Contas Fixas</dt>
                   <dd className="flex items-baseline">
-                    <div className="text-2xl font-semibold text-gray-900">R$ {totalFixedBills.toFixed(2)}</div>
+                    <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">R$ {totalFixedBills.toFixed(2)}</div>
                   </dd>
                 </dl>
               </div>
@@ -226,17 +249,17 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg dashboard-card">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg dashboard-card">
           <div className="p-5">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-green-100 rounded-md p-3">
-                <ArrowTrendingUpIcon className="h-6 w-6 text-green-600" />
+              <div className="flex-shrink-0 bg-green-100 dark:bg-green-900/30 rounded-md p-3">
+                <ArrowTrendingUpIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Economizado</dt>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Economizado</dt>
                   <dd className="flex items-baseline">
-                    <div className="text-2xl font-semibold text-gray-900">R$ {totalSavings.toFixed(2)}</div>
+                    <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">R$ {totalSavings.toFixed(2)}</div>
                   </dd>
                 </dl>
               </div>
@@ -246,18 +269,18 @@ function Dashboard() {
       </div>
 
       {/* Seletor de mês e ano */}
-      <div className="bg-white shadow rounded-lg p-6">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
         <div className="flex flex-wrap items-center justify-between mb-4">
-          <h2 className="text-lg font-medium text-gray-900">Análise de Gastos</h2>
+          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Análise de Gastos</h2>
           <div className="flex space-x-4">
             <div>
-              <label htmlFor="month" className="block text-sm font-medium text-gray-700">Mês</label>
+              <label htmlFor="month" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Mês</label>
               <select
                 id="month"
                 name="month"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               >
                 {Array.from({ length: 12 }, (_, i) => (
                   <option key={i + 1} value={i + 1}>
@@ -267,13 +290,13 @@ function Dashboard() {
               </select>
             </div>
             <div>
-              <label htmlFor="year" className="block text-sm font-medium text-gray-700">Ano</label>
+              <label htmlFor="year" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Ano</label>
               <select
                 id="year"
                 name="year"
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               >
                 {Array.from({ length: 5 }, (_, i) => {
                   const year = new Date().getFullYear() - 2 + i;
@@ -290,20 +313,20 @@ function Dashboard() {
 
         {/* Gráficos */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <h3 className="text-md font-medium text-gray-900 mb-4">Gastos por Categoria</h3>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+            <h3 className="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">Gastos por Categoria</h3>
             <div className="h-64">
               {expenseChartData.labels.length > 0 ? (
                 <Doughnut data={expenseChartData} options={chartOptions} />
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
                   Sem dados para exibir
                 </div>
               )}
             </div>
           </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <h3 className="text-md font-medium text-gray-900 mb-4">Gastos dos Últimos 6 Meses</h3>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+            <h3 className="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">Gastos dos Últimos 6 Meses</h3>
             <div className="h-64">
               {monthlyChartData.labels.length > 0 ? (
                 <Bar 
@@ -311,14 +334,30 @@ function Dashboard() {
                   options={{
                     ...chartOptions,
                     scales: {
+                      x: {
+                        ...chartOptions.scales.x,
+                        ticks: {
+                          ...chartOptions.scales.x.ticks
+                        },
+                        grid: {
+                          ...chartOptions.scales.x.grid
+                        }
+                      },
                       y: {
-                        beginAtZero: true
+                        ...chartOptions.scales.y,
+                        beginAtZero: true,
+                        ticks: {
+                          ...chartOptions.scales.y.ticks
+                        },
+                        grid: {
+                          ...chartOptions.scales.y.grid
+                        }
                       }
                     }
                   }} 
                 />
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
                   Sem dados para exibir
                 </div>
               )}
@@ -328,47 +367,47 @@ function Dashboard() {
       </div>
 
       {/* Contas pendentes */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Contas Pendentes</h2>
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Contas Pendentes</h2>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Descrição
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Valor
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Vencimento
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Categoria
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {pendingBills.length > 0 ? (
                 pendingBills.map((bill) => (
                   <tr key={bill.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                       {bill.description}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       R$ {parseFloat(bill.amount).toFixed(2)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       Dia {bill.dueDay}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {bill.category}
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500">
+                  <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                     Nenhuma conta pendente.
                   </td>
                 </tr>
@@ -379,15 +418,15 @@ function Dashboard() {
       </div>
 
       {/* Dicas de economia */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Dicas de Economia</h2>
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Dicas de Economia</h2>
         <ul className="space-y-3">
           {savingsTips.map((tip, index) => (
             <li key={index} className="flex items-start">
-              <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-5 w-5 text-green-500 dark:text-green-400 mr-2 mt-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              <span className="text-gray-700">{tip}</span>
+              <span className="text-gray-700 dark:text-gray-300">{tip}</span>
             </li>
           ))}
         </ul>
