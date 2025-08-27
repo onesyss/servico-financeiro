@@ -26,13 +26,13 @@ function Layout() {
 
   const navItems = [
     { name: 'Dashboard', path: '/', icon: HomeIcon },
-    { name: 'Despesas', path: '/expenses', icon: CreditCardIcon },
-    { name: 'Dívidas', path: '/debts', icon: BanknotesIcon },
-    { name: 'Contas Fixas', path: '/fixed-bills', icon: ClipboardDocumentListIcon },
-    { name: 'Economia', path: '/savings', icon: ArrowTrendingUpIcon },
-    { name: 'Calendário', path: '/calendar', icon: CalendarIcon },
     { name: 'Saldo em Conta', path: '/account-balance', icon: WalletIcon },
+    { name: 'Contas Fixas', path: '/fixed-bills', icon: ClipboardDocumentListIcon },
+    { name: 'Dívidas', path: '/debts', icon: BanknotesIcon },
+    { name: 'Despesas', path: '/expenses', icon: CreditCardIcon },
+    { name: 'Calendário', path: '/calendar', icon: CalendarIcon },
     { name: 'Relatórios', path: '/reports', icon: DocumentChartBarIcon },
+    { name: 'Economia', path: '/savings', icon: ArrowTrendingUpIcon },
   ];
 
   return (

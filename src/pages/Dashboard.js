@@ -199,32 +199,16 @@ function Dashboard() {
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg dashboard-card">
           <div className="p-5">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-primary-100 dark:bg-primary-900/30 rounded-md p-3">
-                <CalendarIcon className="h-6 w-6 text-primary-600 dark:text-primary-400" />
+              <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900/30 rounded-md p-3">
+                <WalletIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Gastos do Mês</dt>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Saldo Disponível</dt>
                   <dd className="flex items-baseline">
-                    <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">R$ {totalExpensesMonth.toFixed(2)}</div>
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg dashboard-card">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-red-100 dark:bg-red-900/30 rounded-md p-3">
-                <CreditCardIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total em Dívidas</dt>
-                  <dd className="flex items-baseline">
-                    <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">R$ {totalDebts.toFixed(2)}</div>
+                    <div className={`text-2xl font-semibold ${accountBalance.currentBalance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600 dark:text-red-400'}`}>
+                      R$ {accountBalance.currentBalance.toFixed(2)}
+                    </div>
                   </dd>
                 </dl>
               </div>
@@ -253,16 +237,32 @@ function Dashboard() {
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg dashboard-card">
           <div className="p-5">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900/30 rounded-md p-3">
-                <WalletIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div className="flex-shrink-0 bg-red-100 dark:bg-red-900/30 rounded-md p-3">
+                <CreditCardIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Saldo Disponível</dt>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total em Dívidas</dt>
                   <dd className="flex items-baseline">
-                    <div className={`text-2xl font-semibold ${accountBalance.currentBalance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600 dark:text-red-400'}`}>
-                      R$ {accountBalance.currentBalance.toFixed(2)}
-                    </div>
+                    <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">R$ {totalDebts.toFixed(2)}</div>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg dashboard-card">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 bg-primary-100 dark:bg-primary-900/30 rounded-md p-3">
+                <CalendarIcon className="h-6 w-6 text-primary-600 dark:text-primary-400" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Gastos do Mês</dt>
+                  <dd className="flex items-baseline">
+                    <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">R$ {totalExpensesMonth.toFixed(2)}</div>
                   </dd>
                 </dl>
               </div>
