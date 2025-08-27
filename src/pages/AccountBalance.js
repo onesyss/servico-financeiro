@@ -217,35 +217,37 @@ function AccountBalance() {
                  </p>
                </div>
              </div>
-             <div className="flex space-x-2">
-               <button
-                 onClick={() => {
-                   setInitialBalanceValue(availableBalance.toString());
-                   setIsEditingBalance(true);
-                   setShowInitialBalanceModal(true);
-                 }}
-                 className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
-                 title="Editar Saldo"
-               >
-                 <PencilIcon className="w-4 h-4" />
-               </button>
-                               <button
-                  onClick={() => {
-                    showDeleteConfirm('Saldo Disponível', () => {
-                      try {
-                        setInitialBalance(0);
-                        showSuccess('Saldo zerado com sucesso!');
-                      } catch (error) {
-                        showError('Erro ao zerar saldo. Tente novamente.');
-                      }
-                    });
-                  }}
-                  className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                  title="Zerar Saldo"
-                >
-                  <TrashIcon className="w-4 h-4" />
-                </button>
-             </div>
+             {availableBalance !== 0 && (
+               <div className="flex space-x-2">
+                 <button
+                   onClick={() => {
+                     setInitialBalanceValue(availableBalance.toString());
+                     setIsEditingBalance(true);
+                     setShowInitialBalanceModal(true);
+                   }}
+                   className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
+                   title="Editar Saldo"
+                 >
+                   <PencilIcon className="w-4 h-4" />
+                 </button>
+                 <button
+                   onClick={() => {
+                     showDeleteConfirm('Saldo Disponível', () => {
+                       try {
+                         setInitialBalance(0);
+                         showSuccess('Saldo zerado com sucesso!');
+                       } catch (error) {
+                         showError('Erro ao zerar saldo. Tente novamente.');
+                       }
+                     });
+                   }}
+                   className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                   title="Zerar Saldo"
+                 >
+                   <TrashIcon className="w-4 h-4" />
+                 </button>
+               </div>
+             )}
            </div>
          </div>
       </div>

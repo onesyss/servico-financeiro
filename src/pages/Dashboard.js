@@ -21,6 +21,8 @@ function Dashboard() {
     getExpensesByCategory
   } = useAppContext();
 
+
+
   // Estado para o mês e ano selecionados
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -452,6 +454,8 @@ function Dashboard() {
           ))}
         </ul>
       </div>
+
+
     </div>
   );
 }
