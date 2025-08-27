@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
-import { CalendarIcon, CreditCardIcon, BanknotesIcon, ArrowTrendingUpIcon, WalletIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, CreditCardIcon, BanknotesIcon, ArrowTrendingUpIcon, WalletIcon, BuildingLibraryIcon } from '@heroicons/react/24/outline';
 
 // Registrar componentes do Chart.js
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
@@ -14,14 +14,14 @@ function Dashboard() {
     fixedBills, 
     savingsGoals,
     accountBalance,
+    bankAccounts,
     calculateTotalExpenses,
     calculateTotalDebts,
     calculateTotalFixedBills,
     calculateTotalSavings,
-    getExpensesByCategory
+    getExpensesByCategory,
+    getTotalBankBalance
   } = useAppContext();
-
-
 
   // Estado para o mês e ano selecionados
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -102,11 +102,11 @@ function Dashboard() {
         year -= 1;
       }
       
-      const monthName = new Date(year, month - 1, 1).toLocaleString('pt-BR', { month: 'short' });
-      months.push(`${monthName}/${year}`);
+      const monthName = new Date(year, month - 1).toLocaleDateString('pt-BR', { month: 'short' });
+      months.push(monthName);
       
-      const total = calculateTotalExpenses(month, year);
-      monthlyData.push(total);
+      const totalExpenses = calculateTotalExpenses(month, year);
+      monthlyData.push(totalExpenses);
     }
     
     setMonthlyChartData({
@@ -121,7 +121,14 @@ function Dashboard() {
     });
   };
 
-  // Opções para os gráficos
+  // Calcular totais
+  const totalExpensesMonth = calculateTotalExpenses(selectedMonth, selectedYear);
+  const totalDebts = calculateTotalDebts();
+  const totalFixedBills = calculateTotalFixedBills();
+  const totalSavings = calculateTotalSavings();
+  const totalBankBalance = getTotalBankBalance();
+
+  // Configurações dos gráficos
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -129,75 +136,50 @@ function Dashboard() {
       legend: {
         position: 'bottom',
         labels: {
-          color: document.documentElement.classList.contains('dark') ? '#d1d5db' : '#374151',
-          usePointStyle: true,
-          padding: 20
-        }
+          color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#374151',
+        },
       },
     },
-    scales: {
-      x: {
-        ticks: {
-          color: document.documentElement.classList.contains('dark') ? '#d1d5db' : '#374151'
-        },
-        grid: {
-          color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'
-        }
-      },
-      y: {
-        ticks: {
-          color: document.documentElement.classList.contains('dark') ? '#d1d5db' : '#374151'
-        },
-        grid: {
-          color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'
-        }
-      }
-    }
   };
 
-  // Calcular totais
-  const totalExpensesMonth = calculateTotalExpenses(selectedMonth, selectedYear);
-  const totalDebts = calculateTotalDebts();
-  const totalFixedBills = calculateTotalFixedBills();
-  const totalSavings = calculateTotalSavings();
-
-  // Calcular contas fixas pendentes
-  const pendingBills = fixedBills.filter(bill => !bill.isPaid);
-
-  // Calcular dicas de economia
-  const savingsTips = [];
-  
-  // Verificar gastos por categoria para sugerir dicas
-  const categories = getExpensesByCategory(selectedMonth, selectedYear);
-  
-  if (categories['Alimentação'] && categories['Alimentação'] > 500) {
-    savingsTips.push('Considere preparar mais refeições em casa para reduzir gastos com alimentação.');
-  }
-  
-  if (categories['Lazer'] && categories['Lazer'] > 300) {
-    savingsTips.push('Seus gastos com lazer estão altos. Procure alternativas gratuitas ou mais baratas de entretenimento.');
-  }
-  
-  if (totalFixedBills > 0.5 * totalExpensesMonth) {
-    savingsTips.push('Suas contas fixas representam mais de 50% dos seus gastos. Considere renegociar ou buscar alternativas mais econômicas.');
-  }
-  
-  if (totalDebts > 0) {
-    savingsTips.push('Priorize o pagamento das dívidas com juros mais altos para economizar a longo prazo.');
-  }
-  
-  // Adicionar dicas gerais se não houver dicas específicas
-  if (savingsTips.length === 0) {
-    savingsTips.push('Estabeleça um orçamento mensal e acompanhe seus gastos regularmente.');
-    savingsTips.push('Considere automatizar suas economias transferindo um valor fixo para poupança todo mês.');
-  }
+  const barChartOptions = {
+    ...chartOptions,
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#374151',
+          callback: function(value) {
+            return 'R$ ' + value.toFixed(2);
+          },
+        },
+        grid: {
+          color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb',
+        },
+      },
+      x: {
+        ticks: {
+          color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#374151',
+        },
+        grid: {
+          color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb',
+        },
+      },
+    },
+  };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
-      
-      {/* Cartões de resumo */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="space-y-6">
+      {/* Cabeçalho */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+          <p className="text-gray-600 dark:text-gray-400">Visão geral das suas finanças</p>
+        </div>
+      </div>
+
+      {/* Cards de resumo */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-6">
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg dashboard-card">
           <div className="p-5">
             <div className="flex items-center">
@@ -210,6 +192,26 @@ function Dashboard() {
                   <dd className="flex items-baseline">
                     <div className={`text-2xl font-semibold ${accountBalance.currentBalance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600 dark:text-red-400'}`}>
                       R$ {accountBalance.currentBalance.toFixed(2)}
+                    </div>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg dashboard-card">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 bg-purple-100 dark:bg-purple-900/30 rounded-md p-3">
+                <BuildingLibraryIcon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Bancos</dt>
+                  <dd className="flex items-baseline">
+                    <div className={`text-2xl font-semibold ${totalBankBalance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600 dark:text-red-400'}`}>
+                      R$ {totalBankBalance.toFixed(2)}
                     </div>
                   </dd>
                 </dl>
@@ -300,162 +302,97 @@ function Dashboard() {
               <label htmlFor="month" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Mês</label>
               <select
                 id="month"
-                name="month"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
                 className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               >
-                {Array.from({ length: 12 }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {new Date(2000, i, 1).toLocaleString('pt-BR', { month: 'long' })}
-                  </option>
-                ))}
+                <option value={1}>Janeiro</option>
+                <option value={2}>Fevereiro</option>
+                <option value={3}>Março</option>
+                <option value={4}>Abril</option>
+                <option value={5}>Maio</option>
+                <option value={6}>Junho</option>
+                <option value={7}>Julho</option>
+                <option value={8}>Agosto</option>
+                <option value={9}>Setembro</option>
+                <option value={10}>Outubro</option>
+                <option value={11}>Novembro</option>
+                <option value={12}>Dezembro</option>
               </select>
             </div>
             <div>
               <label htmlFor="year" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Ano</label>
               <select
                 id="year"
-                name="year"
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(parseInt(e.target.value))}
                 className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               >
-                {Array.from({ length: 5 }, (_, i) => {
-                  const year = new Date().getFullYear() - 2 + i;
-                  return (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  );
-                })}
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
               </select>
             </div>
           </div>
         </div>
 
         {/* Gráficos */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-            <h3 className="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">Gastos por Categoria</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Gráfico de pizza - Gastos por categoria */}
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Gastos por Categoria</h3>
             <div className="h-64">
               {expenseChartData.labels.length > 0 ? (
                 <Doughnut data={expenseChartData} options={chartOptions} />
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
-                  Sem dados para exibir
+                  Nenhum dado disponível para o período selecionado
                 </div>
               )}
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-            <h3 className="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">Gastos dos Últimos 6 Meses</h3>
+
+          {/* Gráfico de barras - Gastos mensais */}
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Gastos dos Últimos 6 Meses</h3>
             <div className="h-64">
-              {monthlyChartData.labels.length > 0 ? (
-                <Bar 
-                  data={monthlyChartData} 
-                  options={{
-                    ...chartOptions,
-                    scales: {
-                      x: {
-                        ...chartOptions.scales.x,
-                        ticks: {
-                          ...chartOptions.scales.x.ticks
-                        },
-                        grid: {
-                          ...chartOptions.scales.x.grid
-                        }
-                      },
-                      y: {
-                        ...chartOptions.scales.y,
-                        beginAtZero: true,
-                        ticks: {
-                          ...chartOptions.scales.y.ticks
-                        },
-                        grid: {
-                          ...chartOptions.scales.y.grid
-                        }
-                      }
-                    }
-                  }} 
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
-                  Sem dados para exibir
-                </div>
-              )}
+              <Bar data={monthlyChartData} options={barChartOptions} />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Contas pendentes */}
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Contas Pendentes</h2>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Descrição
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Valor
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Vencimento
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Categoria
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {pendingBills.length > 0 ? (
-                pendingBills.map((bill) => (
-                  <tr key={bill.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {bill.description}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      R$ {parseFloat(bill.amount).toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      Dia {bill.dueDay}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {bill.category}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                    Nenhuma conta pendente.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      {/* Resumo das contas bancárias */}
+      {bankAccounts.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Resumo das Contas Bancárias</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {bankAccounts.map((account) => (
+              <div 
+                key={account.id} 
+                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                style={{ borderLeftColor: account.color, borderLeftWidth: '4px' }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    <div 
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: account.color }}
+                    ></div>
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                      {account.name}
+                    </h3>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{account.bank}</p>
+                <p className={`text-lg font-bold ${account.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  R$ {account.balance.toFixed(2)}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-
-      {/* Dicas de economia */}
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Dicas de Economia</h2>
-        <ul className="space-y-3">
-          {savingsTips.map((tip, index) => (
-            <li key={index} className="flex items-start">
-              <svg className="h-5 w-5 text-green-500 dark:text-green-400 mr-2 mt-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              <span className="text-gray-700 dark:text-gray-300">{tip}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-
+      )}
     </div>
   );
 }

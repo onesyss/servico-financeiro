@@ -32,7 +32,28 @@ export const AppProvider = ({ children }) => {
     return savedSavingsGoals ? JSON.parse(savedSavingsGoals) : [];
   });
 
-  // Estado para saldo em conta
+  // Estado para contas bancárias
+  const [bankAccounts, setBankAccounts] = useState(() => {
+    const savedBankAccounts = localStorage.getItem('controlfin_bankAccounts');
+    return savedBankAccounts ? JSON.parse(savedBankAccounts) : [
+      {
+        id: 1,
+        name: 'Conta Principal',
+        bank: 'Banco Principal',
+        balance: 0,
+        color: '#3B82F6',
+        isDefault: true
+      }
+    ];
+  });
+
+  // Estado para lançamentos financeiros
+  const [financialEntries, setFinancialEntries] = useState(() => {
+    const savedEntries = localStorage.getItem('controlfin_financialEntries');
+    return savedEntries ? JSON.parse(savedEntries) : [];
+  });
+
+  // Estado para saldo em conta (mantido para compatibilidade)
   const [accountBalance, setAccountBalance] = useState(() => {
     const savedBalance = localStorage.getItem('controlfin_accountBalance');
     return savedBalance ? JSON.parse(savedBalance) : {
@@ -59,8 +80,135 @@ export const AppProvider = ({ children }) => {
   }, [savingsGoals]);
 
   useEffect(() => {
+    localStorage.setItem('controlfin_bankAccounts', JSON.stringify(bankAccounts));
+  }, [bankAccounts]);
+
+  useEffect(() => {
+    localStorage.setItem('controlfin_financialEntries', JSON.stringify(financialEntries));
+  }, [financialEntries]);
+
+  useEffect(() => {
     localStorage.setItem('controlfin_accountBalance', JSON.stringify(accountBalance));
   }, [accountBalance]);
+
+  // Funções para manipular contas bancárias
+  const addBankAccount = (account) => {
+    const id = bankAccounts.length > 0 ? Math.max(...bankAccounts.map(a => a.id)) + 1 : 1;
+    const newAccount = { 
+      ...account, 
+      id, 
+      balance: parseFloat(account.balance) || 0,
+      isDefault: bankAccounts.length === 0 // Primeira conta é padrão
+    };
+    setBankAccounts([...bankAccounts, newAccount]);
+  };
+
+  const updateBankAccount = (id, updatedAccount) => {
+    setBankAccounts(bankAccounts.map(account => 
+      account.id === id ? { ...updatedAccount, id, balance: parseFloat(updatedAccount.balance) || 0 } : account
+    ));
+  };
+
+  const deleteBankAccount = (id) => {
+    const accountToDelete = bankAccounts.find(account => account.id === id);
+    if (accountToDelete && accountToDelete.isDefault && bankAccounts.length > 1) {
+      // Se for a conta padrão e houver outras contas, tornar a próxima como padrão
+      const remainingAccounts = bankAccounts.filter(account => account.id !== id);
+      const newDefaultAccount = remainingAccounts[0];
+      setBankAccounts(remainingAccounts.map(account => 
+        account.id === newDefaultAccount.id ? { ...account, isDefault: true } : account
+      ));
+    } else {
+      setBankAccounts(bankAccounts.filter(account => account.id !== id));
+    }
+  };
+
+  const setDefaultBankAccount = (id) => {
+    setBankAccounts(bankAccounts.map(account => ({
+      ...account,
+      isDefault: account.id === id
+    })));
+  };
+
+  const updateBankAccountBalance = (id, amount) => {
+    setBankAccounts(bankAccounts.map(account => 
+      account.id === id ? { ...account, balance: account.balance + parseFloat(amount) } : account
+    ));
+  };
+
+  const getDefaultBankAccount = () => {
+    return bankAccounts.find(account => account.isDefault) || bankAccounts[0];
+  };
+
+  const getTotalBankBalance = () => {
+    return bankAccounts.reduce((total, account) => total + account.balance, 0);
+  };
+
+  // Funções para manipular lançamentos financeiros
+  const addFinancialEntry = (entry) => {
+    const id = financialEntries.length > 0 ? Math.max(...financialEntries.map(e => e.id)) + 1 : 1;
+    const newEntry = {
+      ...entry,
+      id,
+      isPaid: false,
+      createdAt: new Date().toISOString(),
+      installments: entry.isRecurring ? entry.installments || 1 : 1,
+      currentInstallment: 1
+    };
+
+    // Se for parcelado, criar múltiplos lançamentos
+    if (entry.isRecurring && entry.installments > 1) {
+      const entries = [];
+      for (let i = 0; i < entry.installments; i++) {
+        const installmentEntry = {
+          ...newEntry,
+          id: id + i,
+          currentInstallment: i + 1,
+          totalInstallments: entry.installments,
+          dueDate: (() => {
+            const date = new Date(entry.dueDate);
+            date.setMonth(date.getMonth() + i);
+            return date.toISOString().split('T')[0];
+          })()
+        };
+        entries.push(installmentEntry);
+      }
+      setFinancialEntries([...financialEntries, ...entries]);
+    } else {
+      setFinancialEntries([...financialEntries, newEntry]);
+    }
+  };
+
+  const updateFinancialEntry = (id, updatedEntry) => {
+    setFinancialEntries(financialEntries.map(entry => 
+      entry.id === id ? { ...updatedEntry, id } : entry
+    ));
+  };
+
+  const deleteFinancialEntry = (id) => {
+    setFinancialEntries(financialEntries.filter(entry => entry.id !== id));
+  };
+
+  const toggleFinancialEntryPaid = (id) => {
+    setFinancialEntries(financialEntries.map(entry => {
+      if (entry.id === id) {
+        const wasPaid = entry.isPaid;
+        const newEntry = { ...entry, isPaid: !wasPaid };
+        
+        // Se está marcando como pago, desconta da conta bancária
+        if (!wasPaid && entry.bankAccountId && entry.bankAccountId !== 'cash') {
+          updateBankAccountBalance(entry.bankAccountId, -parseFloat(entry.amount));
+        }
+        // Se está desmarcando como pago, adiciona de volta à conta bancária
+        else if (wasPaid && entry.bankAccountId && entry.bankAccountId !== 'cash') {
+          updateBankAccountBalance(entry.bankAccountId, parseFloat(entry.amount));
+        }
+        
+        return newEntry;
+      }
+      return entry;
+    }));
+  };
 
   // Funções para manipular despesas
   const addExpense = (expense) => {
@@ -145,7 +293,7 @@ export const AppProvider = ({ children }) => {
     }));
   };
 
-  // Funções para manipular saldo em conta
+  // Funções para manipular saldo em conta (atualizadas para usar contas bancárias)
   const addTransaction = (transaction) => {
     const id = accountBalance.transactions.length > 0 
       ? Math.max(...accountBalance.transactions.map(t => t.id)) + 1 
@@ -153,6 +301,11 @@ export const AppProvider = ({ children }) => {
     
     const newTransaction = { ...transaction, id, date: new Date().toISOString() };
     const amount = parseFloat(transaction.amount);
+    
+    // Atualizar saldo da conta bancária selecionada
+    if (transaction.bankAccountId) {
+      updateBankAccountBalance(transaction.bankAccountId, amount);
+    }
     
     setAccountBalance(prev => ({
       currentBalance: prev.currentBalance + amount,
@@ -165,6 +318,16 @@ export const AppProvider = ({ children }) => {
       const oldTransaction = prev.transactions.find(t => t.id === id);
       const oldAmount = parseFloat(oldTransaction.amount);
       const newAmount = parseFloat(updatedTransaction.amount);
+      
+      // Reverter mudança na conta bancária antiga
+      if (oldTransaction.bankAccountId) {
+        updateBankAccountBalance(oldTransaction.bankAccountId, -oldAmount);
+      }
+      
+      // Aplicar mudança na nova conta bancária
+      if (updatedTransaction.bankAccountId) {
+        updateBankAccountBalance(updatedTransaction.bankAccountId, newAmount);
+      }
       
       return {
         currentBalance: prev.currentBalance - oldAmount + newAmount,
@@ -179,6 +342,11 @@ export const AppProvider = ({ children }) => {
     setAccountBalance(prev => {
       const transaction = prev.transactions.find(t => t.id === id);
       const amount = parseFloat(transaction.amount);
+      
+      // Reverter mudança na conta bancária
+      if (transaction.bankAccountId) {
+        updateBankAccountBalance(transaction.bankAccountId, -amount);
+      }
       
       return {
         currentBalance: prev.currentBalance - amount,
@@ -252,7 +420,11 @@ export const AppProvider = ({ children }) => {
       .filter(debt => debt.dueDate === dateString)
       .map(debt => ({ ...debt, type: 'debt' }));
 
-    return [...fixedBillsForDate, ...debtsForDate];
+    const financialEntriesForDate = financialEntries
+      .filter(entry => entry.dueDate === dateString)
+      .map(entry => ({ ...entry, type: 'financial' }));
+
+    return [...fixedBillsForDate, ...debtsForDate, ...financialEntriesForDate];
   };
 
   const getOverdueBills = () => {
@@ -267,7 +439,11 @@ export const AppProvider = ({ children }) => {
       .filter(debt => !debt.isPaid && new Date(debt.dueDate) < today)
       .map(debt => ({ ...debt, type: 'debt' }));
 
-    return [...overdueFixedBills, ...overdueDebts];
+    const overdueFinancialEntries = financialEntries
+      .filter(entry => !entry.isPaid && new Date(entry.dueDate) < today)
+      .map(entry => ({ ...entry, type: 'financial' }));
+
+    return [...overdueFixedBills, ...overdueDebts, ...overdueFinancialEntries];
   };
 
   const getUpcomingBills = (days = 7) => {
@@ -283,7 +459,11 @@ export const AppProvider = ({ children }) => {
       .filter(debt => !debt.isPaid && new Date(debt.dueDate) >= today && new Date(debt.dueDate) <= futureDate)
       .map(debt => ({ ...debt, type: 'debt' }));
 
-    return [...upcomingFixedBills, ...upcomingDebts];
+    const upcomingFinancialEntries = financialEntries
+      .filter(entry => !entry.isPaid && new Date(entry.dueDate) >= today && new Date(entry.dueDate) <= futureDate)
+      .map(entry => ({ ...entry, type: 'financial' }));
+
+    return [...upcomingFixedBills, ...upcomingDebts, ...upcomingFinancialEntries];
   };
 
   // Valor fornecido pelo contexto
@@ -293,6 +473,8 @@ export const AppProvider = ({ children }) => {
     fixedBills,
     savingsGoals,
     accountBalance,
+    bankAccounts,
+    financialEntries,
     addExpense,
     updateExpense,
     deleteExpense,
@@ -311,6 +493,17 @@ export const AppProvider = ({ children }) => {
     updateTransaction,
     deleteTransaction,
     setInitialBalance,
+    addBankAccount,
+    updateBankAccount,
+    deleteBankAccount,
+    setDefaultBankAccount,
+    updateBankAccountBalance,
+    getDefaultBankAccount,
+    getTotalBankBalance,
+    addFinancialEntry,
+    updateFinancialEntry,
+    deleteFinancialEntry,
+    toggleFinancialEntryPaid,
     calculateTotalExpenses,
     calculateTotalDebts,
     calculateTotalFixedBills,
