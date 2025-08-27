@@ -67,6 +67,7 @@ function Layout() {
     { name: 'Dívidas', path: '/debts', icon: BanknotesIcon },
     { name: 'Despesas', path: '/expenses', icon: CreditCardIcon },
     { name: 'Economia', path: '/savings', icon: ArrowTrendingUpIcon },
+    { name: 'Relatórios', path: '/reports', icon: DocumentChartBarIcon },
   ];
 
   return (

@@ -7,6 +7,7 @@ import FixedBills from './pages/FixedBills';
 import Savings from './pages/Savings';
 import AccountBalance from './pages/AccountBalance';
 import FinancialEntries from './pages/FinancialEntries';
+import Reports from './pages/Reports';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
@@ -54,6 +55,7 @@ function AuthenticatedApp() {
           <Route path="savings" element={<Savings />} />
           <Route path="account-balance" element={<AccountBalance />} />
           <Route path="financial-entries" element={<FinancialEntries />} />
+          <Route path="reports" element={<Reports />} />
           <Route path="profile" element={<Profile />} />
         </Route>
       </Routes>
