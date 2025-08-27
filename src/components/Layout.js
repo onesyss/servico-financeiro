@@ -9,6 +9,7 @@ import {
   ArrowTrendingUpIcon,
   CalendarIcon,
   DocumentChartBarIcon,
+  WalletIcon,
   Bars3Icon,
   XMarkIcon,
   SunIcon,
@@ -30,6 +31,7 @@ function Layout() {
     { name: 'Contas Fixas', path: '/fixed-bills', icon: ClipboardDocumentListIcon },
     { name: 'Economia', path: '/savings', icon: ArrowTrendingUpIcon },
     { name: 'Calendário', path: '/calendar', icon: CalendarIcon },
+    { name: 'Saldo em Conta', path: '/account-balance', icon: WalletIcon },
     { name: 'Relatórios', path: '/reports', icon: DocumentChartBarIcon },
   ];
 

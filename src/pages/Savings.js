@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useAppContext } from '../context/AppContext';
+import useAlert from '../hooks/useAlert';
+import Alert from '../components/Alert';
 
 function Savings() {
   // Usar o contexto global para acessar as metas de economia
   const { savingsGoals, addSavingsGoal, updateSavingsGoal, deleteSavingsGoal, addAmountToSavingsGoal } = useAppContext();
+  
+  // Hook para gerenciar alertas
+  const { alert, showDeleteConfirm, showEditConfirm, showSuccess, showError, hideAlert } = useAlert();
 
   // Estado para o formulário de nova meta de economia
   const [newGoal, setNewGoal] = useState({
@@ -59,42 +64,66 @@ function Savings() {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (editMode) {
-      // Atualizar meta existente
-      updateSavingsGoal(editId, { ...newGoal, id: editId });
-      setEditMode(false);
-      setEditId(null);
-    } else {
-      // Adicionar nova meta
-      addSavingsGoal(newGoal);
+    // Validação básica
+    if (!newGoal.description || !newGoal.targetAmount || !newGoal.priority) {
+      showError('Por favor, preencha todos os campos obrigatórios.');
+      return;
     }
     
-    // Limpar formulário
-    setNewGoal({
-      description: '',
-      targetAmount: '',
-      currentAmount: '',
-      deadline: '',
-      priority: ''
-    });
+    try {
+      if (editMode) {
+        // Atualizar meta existente
+        updateSavingsGoal(editId, { ...newGoal, id: editId });
+        setEditMode(false);
+        setEditId(null);
+        showSuccess('Meta de economia atualizada com sucesso!');
+      } else {
+        // Adicionar nova meta
+        addSavingsGoal(newGoal);
+        showSuccess('Meta de economia adicionada com sucesso!');
+      }
+      
+      // Limpar formulário
+      setNewGoal({
+        description: '',
+        targetAmount: '',
+        currentAmount: '',
+        deadline: '',
+        priority: ''
+      });
+    } catch (error) {
+      showError('Erro ao salvar meta de economia. Tente novamente.');
+    }
   };
 
   // Função para iniciar a edição de uma meta
   const handleEdit = (goal) => {
-    setNewGoal({
-      description: goal.description,
-      targetAmount: goal.targetAmount,
-      currentAmount: goal.currentAmount,
-      deadline: goal.deadline,
-      priority: goal.priority
+    showEditConfirm(goal.description, () => {
+      setNewGoal({
+        description: goal.description,
+        targetAmount: goal.targetAmount,
+        currentAmount: goal.currentAmount,
+        deadline: goal.deadline,
+        priority: goal.priority
+      });
+      setEditMode(true);
+      setEditId(goal.id);
     });
-    setEditMode(true);
-    setEditId(goal.id);
   };
 
   // Função para excluir uma meta
   const handleDelete = (id) => {
-    deleteSavingsGoal(id);
+    const goal = savingsGoals.find(g => g.id === id);
+    if (goal) {
+      showDeleteConfirm(goal.description, () => {
+        try {
+          deleteSavingsGoal(id);
+          showSuccess('Meta de economia excluída com sucesso!');
+        } catch (error) {
+          showError('Erro ao excluir meta de economia. Tente novamente.');
+        }
+      });
+    }
   };
 
   // Função para adicionar valor a uma meta
@@ -431,6 +460,17 @@ function Savings() {
           </div>
         </div>
       </div>
+      
+      {/* Componente de Alerta */}
+      <Alert
+        show={alert.show}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        onConfirm={alert.onConfirm}
+        onCancel={alert.onCancel}
+        onClose={hideAlert}
+      />
     </div>
   );
 }

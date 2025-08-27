@@ -7,6 +7,7 @@ import FixedBills from './pages/FixedBills';
 import Savings from './pages/Savings';
 import Calendar from './pages/Calendar';
 import Reports from './pages/Reports';
+import AccountBalance from './pages/AccountBalance';
 import Layout from './components/Layout';
 import { ThemeProvider } from './context/ThemeContext';
 
@@ -23,6 +24,7 @@ function App() {
             <Route path="savings" element={<Savings />} />
             <Route path="calendar" element={<Calendar />} />
             <Route path="reports" element={<Reports />} />
+            <Route path="account-balance" element={<AccountBalance />} />
           </Route>
         </Routes>
       </div>

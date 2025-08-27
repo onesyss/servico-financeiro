@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
-import { CalendarIcon, CreditCardIcon, BanknotesIcon, ArrowTrendingUpIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, CreditCardIcon, BanknotesIcon, ArrowTrendingUpIcon, WalletIcon } from '@heroicons/react/24/outline';
 
 // Registrar componentes do Chart.js
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
@@ -13,6 +13,7 @@ function Dashboard() {
     debts, 
     fixedBills, 
     savingsGoals,
+    accountBalance,
     calculateTotalExpenses,
     calculateTotalDebts,
     calculateTotalFixedBills,
@@ -194,7 +195,7 @@ function Dashboard() {
       <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
       
       {/* Cartões de resumo */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg dashboard-card">
           <div className="p-5">
             <div className="flex items-center">
@@ -242,6 +243,26 @@ function Dashboard() {
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Contas Fixas</dt>
                   <dd className="flex items-baseline">
                     <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">R$ {totalFixedBills.toFixed(2)}</div>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg dashboard-card">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900/30 rounded-md p-3">
+                <WalletIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Saldo Disponível</dt>
+                  <dd className="flex items-baseline">
+                    <div className={`text-2xl font-semibold ${accountBalance.currentBalance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600 dark:text-red-400'}`}>
+                      R$ {accountBalance.currentBalance.toFixed(2)}
+                    </div>
                   </dd>
                 </dl>
               </div>

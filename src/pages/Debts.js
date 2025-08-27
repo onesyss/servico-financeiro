@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
-import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { useAppContext } from '../context/AppContext';
+import useAlert from '../hooks/useAlert';
+import Alert from '../components/Alert';
 
 function Debts() {
   // Usar o contexto global para acessar as dívidas
-  const { debts, addDebt, updateDebt, deleteDebt } = useAppContext();
+  const { debts, addDebt, updateDebt, deleteDebt, addFixedBill } = useAppContext();
+  
+  // Hook para gerenciar alertas
+  const { alert, showDeleteConfirm, showEditConfirm, showSuccess, showError, hideAlert } = useAlert();
 
   // Estado para o formulário de nova dívida
   const [newDebt, setNewDebt] = useState({
@@ -21,6 +26,18 @@ function Debts() {
   // Estado para controlar o modo de edição
   const [editMode, setEditMode] = useState(false);
   const [editId, setEditId] = useState(null);
+  
+  // Estado para modal de lançamentos recorrentes
+  const [showRecurringModal, setShowRecurringModal] = useState(false);
+  const [recurringData, setRecurringData] = useState({
+    description: '',
+    totalAmount: '',
+    installments: '',
+    startDate: '',
+    dueDay: '',
+    type: 'debt', // 'debt' ou 'fixed-bill'
+    category: 'Outros'
+  });
 
   // Opções de prioridade
   const priorityOptions = ['Alta', 'Média', 'Baixa'];
@@ -38,48 +55,133 @@ function Debts() {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (editMode) {
-      // Atualizar dívida existente
-      updateDebt(editId, { ...newDebt, id: editId });
-      setEditMode(false);
-      setEditId(null);
-    } else {
-      // Adicionar nova dívida
-      addDebt(newDebt);
+    // Validação básica
+    if (!newDebt.description || !newDebt.totalAmount || !newDebt.remainingAmount || !newDebt.installments || !newDebt.priority) {
+      showError('Por favor, preencha todos os campos obrigatórios.');
+      return;
     }
     
-    // Limpar formulário
-    setNewDebt({
-      description: '',
-      totalAmount: '',
-      remainingAmount: '',
-      installments: '',
-      remainingInstallments: '',
-      interestRate: '',
-      dueDate: '',
-      priority: ''
-    });
+    try {
+      if (editMode) {
+        // Atualizar dívida existente
+        updateDebt(editId, { ...newDebt, id: editId });
+        setEditMode(false);
+        setEditId(null);
+        showSuccess('Dívida atualizada com sucesso!');
+      } else {
+        // Adicionar nova dívida
+        addDebt(newDebt);
+        showSuccess('Dívida adicionada com sucesso!');
+      }
+      
+      // Limpar formulário
+      setNewDebt({
+        description: '',
+        totalAmount: '',
+        remainingAmount: '',
+        installments: '',
+        remainingInstallments: '',
+        interestRate: '',
+        dueDate: '',
+        priority: ''
+      });
+    } catch (error) {
+      showError('Erro ao salvar dívida. Tente novamente.');
+    }
   };
 
   // Função para iniciar a edição de uma dívida
   const handleEdit = (debt) => {
-    setNewDebt({
-      description: debt.description,
-      totalAmount: debt.totalAmount,
-      remainingAmount: debt.remainingAmount,
-      installments: debt.installments,
-      remainingInstallments: debt.remainingInstallments,
-      interestRate: debt.interestRate,
-      dueDate: debt.dueDate,
-      priority: debt.priority
+    showEditConfirm(debt.description, () => {
+      setNewDebt({
+        description: debt.description,
+        totalAmount: debt.totalAmount,
+        remainingAmount: debt.remainingAmount,
+        installments: debt.installments,
+        remainingInstallments: debt.remainingInstallments,
+        interestRate: debt.interestRate,
+        dueDate: debt.dueDate,
+        priority: debt.priority
+      });
+      setEditMode(true);
+      setEditId(debt.id);
     });
-    setEditMode(true);
-    setEditId(debt.id);
   };
 
   // Função para excluir uma dívida
   const handleDelete = (id) => {
-    deleteDebt(id);
+    const debt = debts.find(d => d.id === id);
+    if (debt) {
+      showDeleteConfirm(debt.description, () => {
+        try {
+          deleteDebt(id);
+          showSuccess('Dívida excluída com sucesso!');
+        } catch (error) {
+          showError('Erro ao excluir dívida. Tente novamente.');
+        }
+      });
+    }
+  };
+
+  // Função para lidar com mudanças no formulário de lançamentos recorrentes
+  const handleRecurringInputChange = (e) => {
+    const { name, value } = e.target;
+    setRecurringData({
+      ...recurringData,
+      [name]: value,
+    });
+  };
+
+  // Função para criar lançamentos recorrentes
+  const handleCreateRecurring = () => {
+    if (recurringData.description && recurringData.totalAmount && recurringData.installments && recurringData.startDate) {
+      const totalAmount = parseFloat(recurringData.totalAmount);
+      const installments = parseInt(recurringData.installments);
+      const installmentAmount = totalAmount / installments;
+      const startDate = new Date(recurringData.startDate);
+      
+      if (recurringData.type === 'debt') {
+        // Criar dívida parcelada
+        const debtData = {
+          description: recurringData.description,
+          totalAmount: totalAmount,
+          remainingAmount: totalAmount,
+          installments: installments,
+          remainingInstallments: installments,
+          interestRate: '0',
+          dueDate: startDate.toISOString(),
+          priority: 'Média'
+        };
+        addDebt(debtData);
+      } else {
+        // Criar contas fixas recorrentes
+        for (let i = 0; i < installments; i++) {
+          const dueDate = new Date(startDate);
+          dueDate.setMonth(dueDate.getMonth() + i);
+          
+          const fixedBillData = {
+            description: `${recurringData.description} - Parcela ${i + 1}/${installments}`,
+            amount: installmentAmount,
+            dueDay: dueDate.getDate(),
+            isEssential: false,
+            category: recurringData.category
+          };
+          addFixedBill(fixedBillData);
+        }
+      }
+      
+      // Limpar formulário e fechar modal
+      setRecurringData({
+        description: '',
+        totalAmount: '',
+        installments: '',
+        startDate: '',
+        dueDay: '',
+        type: 'debt',
+        category: 'Outros'
+      });
+      setShowRecurringModal(false);
+    }
   };
 
   // Calcular total das dívidas
@@ -99,13 +201,22 @@ function Debts() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Controle de Dívidas</h1>
-        <div className="text-right">
-          <p className="text-lg font-semibold text-red-600 dark:text-red-400">
-            Total: R$ {totalDebt.toFixed(2)}
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Pagamento mensal estimado: R$ {totalMonthlyPayment.toFixed(2)}
-          </p>
+        <div className="flex items-center space-x-4">
+          <div className="text-right">
+            <p className="text-lg font-semibold text-red-600 dark:text-red-400">
+              Total: R$ {totalDebt.toFixed(2)}
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Pagamento mensal estimado: R$ {totalMonthlyPayment.toFixed(2)}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowRecurringModal(true)}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            <CalendarIcon className="w-5 h-5 mr-2" />
+            Lançamento Recorrente
+          </button>
         </div>
       </div>
 
@@ -457,6 +568,174 @@ function Debts() {
           </ul>
         </div>
       </div>
+
+      {/* Modal de Lançamentos Recorrentes */}
+      {showRecurringModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Criar Lançamento Recorrente</h3>
+              <button
+                onClick={() => setShowRecurringModal(false)}
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Descrição
+                  </label>
+                  <input
+                    type="text"
+                    name="description"
+                    value={recurringData.description}
+                    onChange={handleRecurringInputChange}
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    placeholder="Ex: Compra de eletrodomésticos"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Tipo de Lançamento
+                  </label>
+                  <select
+                    name="type"
+                    value={recurringData.type}
+                    onChange={handleRecurringInputChange}
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  >
+                    <option value="debt">Dívida Parcelada</option>
+                    <option value="fixed-bill">Contas Fixas Recorrentes</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Valor Total (R$)
+                  </label>
+                  <input
+                    type="number"
+                    name="totalAmount"
+                    value={recurringData.totalAmount}
+                    onChange={handleRecurringInputChange}
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    placeholder="0,00"
+                    step="0.01"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Número de Parcelas
+                  </label>
+                  <input
+                    type="number"
+                    name="installments"
+                    value={recurringData.installments}
+                    onChange={handleRecurringInputChange}
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    placeholder="1"
+                    min="1"
+                    step="1"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Data de Início
+                  </label>
+                  <input
+                    type="date"
+                    name="startDate"
+                    value={recurringData.startDate}
+                    onChange={handleRecurringInputChange}
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Categoria
+                  </label>
+                  <select
+                    name="category"
+                    value={recurringData.category}
+                    onChange={handleRecurringInputChange}
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  >
+                    <option value="Outros">Outros</option>
+                    <option value="Alimentação">Alimentação</option>
+                    <option value="Transporte">Transporte</option>
+                    <option value="Moradia">Moradia</option>
+                    <option value="Lazer">Lazer</option>
+                    <option value="Saúde">Saúde</option>
+                    <option value="Educação">Educação</option>
+                    <option value="Vestuário">Vestuário</option>
+                    <option value="Eletrônicos">Eletrônicos</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Preview do valor da parcela */}
+              {recurringData.totalAmount && recurringData.installments && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    <strong>Preview:</strong> Valor por parcela: R$ {(parseFloat(recurringData.totalAmount || 0) / parseInt(recurringData.installments || 1)).toFixed(2)}
+                  </p>
+                </div>
+              )}
+
+              {/* Informações específicas por tipo */}
+              {recurringData.type === 'debt' && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    <strong>Dívida Parcelada:</strong> Será criada uma dívida única com controle de parcelas restantes.
+                  </p>
+                </div>
+              )}
+
+              {recurringData.type === 'fixed-bill' && (
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                  <p className="text-sm text-green-800 dark:text-green-200">
+                    <strong>Contas Fixas Recorrentes:</strong> Serão criadas {recurringData.installments || 0} contas fixas individuais, uma para cada parcela.
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setShowRecurringModal(false)}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCreateRecurring}
+                className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+              >
+                Criar Lançamento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Componente de Alerta */}
+      <Alert
+        show={alert.show}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        onConfirm={alert.onConfirm}
+        onCancel={alert.onCancel}
+        onClose={hideAlert}
+      />
     </div>
   );
 }

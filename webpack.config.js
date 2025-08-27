@@ -44,7 +44,7 @@ module.exports = {
     static: {
       directory: path.join(__dirname, 'public'),
     },
-    port: 3003,
+    port: 3004,
     hot: true,
   },
 };

@@ -32,6 +32,15 @@ export const AppProvider = ({ children }) => {
     return savedSavingsGoals ? JSON.parse(savedSavingsGoals) : [];
   });
 
+  // Estado para saldo em conta
+  const [accountBalance, setAccountBalance] = useState(() => {
+    const savedBalance = localStorage.getItem('controlfin_accountBalance');
+    return savedBalance ? JSON.parse(savedBalance) : {
+      currentBalance: 0,
+      transactions: []
+    };
+  });
+
   // Salvar dados no localStorage quando o estado mudar
   useEffect(() => {
     localStorage.setItem('controlfin_expenses', JSON.stringify(expenses));
@@ -48,6 +57,10 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem('controlfin_savingsGoals', JSON.stringify(savingsGoals));
   }, [savingsGoals]);
+
+  useEffect(() => {
+    localStorage.setItem('controlfin_accountBalance', JSON.stringify(accountBalance));
+  }, [accountBalance]);
 
   // Funções para manipular despesas
   const addExpense = (expense) => {
@@ -129,6 +142,55 @@ export const AppProvider = ({ children }) => {
         };
       }
       return goal;
+    }));
+  };
+
+  // Funções para manipular saldo em conta
+  const addTransaction = (transaction) => {
+    const id = accountBalance.transactions.length > 0 
+      ? Math.max(...accountBalance.transactions.map(t => t.id)) + 1 
+      : 1;
+    
+    const newTransaction = { ...transaction, id, date: new Date().toISOString() };
+    const amount = parseFloat(transaction.amount);
+    
+    setAccountBalance(prev => ({
+      currentBalance: prev.currentBalance + amount,
+      transactions: [...prev.transactions, newTransaction]
+    }));
+  };
+
+  const updateTransaction = (id, updatedTransaction) => {
+    setAccountBalance(prev => {
+      const oldTransaction = prev.transactions.find(t => t.id === id);
+      const oldAmount = parseFloat(oldTransaction.amount);
+      const newAmount = parseFloat(updatedTransaction.amount);
+      
+      return {
+        currentBalance: prev.currentBalance - oldAmount + newAmount,
+        transactions: prev.transactions.map(transaction => 
+          transaction.id === id ? { ...updatedTransaction, id } : transaction
+        )
+      };
+    });
+  };
+
+  const deleteTransaction = (id) => {
+    setAccountBalance(prev => {
+      const transaction = prev.transactions.find(t => t.id === id);
+      const amount = parseFloat(transaction.amount);
+      
+      return {
+        currentBalance: prev.currentBalance - amount,
+        transactions: prev.transactions.filter(transaction => transaction.id !== id)
+      };
+    });
+  };
+
+  const setInitialBalance = (balance) => {
+    setAccountBalance(prev => ({
+      ...prev,
+      currentBalance: parseFloat(balance)
     }));
   };
 
@@ -230,6 +292,7 @@ export const AppProvider = ({ children }) => {
     debts,
     fixedBills,
     savingsGoals,
+    accountBalance,
     addExpense,
     updateExpense,
     deleteExpense,
@@ -244,6 +307,10 @@ export const AppProvider = ({ children }) => {
     updateSavingsGoal,
     deleteSavingsGoal,
     addAmountToSavingsGoal,
+    addTransaction,
+    updateTransaction,
+    deleteTransaction,
+    setInitialBalance,
     calculateTotalExpenses,
     calculateTotalDebts,
     calculateTotalFixedBills,

@@ -9,9 +9,11 @@ import {
   FunnelIcon
 } from '@heroicons/react/24/outline';
 import { useAppContext } from '../context/AppContext';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 function Reports() {
-  const { expenses, fixedBills, debts, savingsGoals } = useAppContext();
+  const { expenses, fixedBills, debts, savingsGoals, accountBalance } = useAppContext();
   
   // Estados para filtros
   const [dateFilter, setDateFilter] = useState({
@@ -28,7 +30,8 @@ function Reports() {
     expenses: [],
     fixedBills: [],
     debts: [],
-    savings: []
+    savings: [],
+    transactions: []
   });
 
   // Tipos de relatório disponíveis
@@ -37,7 +40,8 @@ function Reports() {
     { id: 'expenses', name: 'Relatório de Despesas', icon: BanknotesIcon },
     { id: 'fixed-bills', name: 'Relatório de Contas Fixas', icon: CalendarIcon },
     { id: 'debts', name: 'Relatório de Dívidas', icon: CreditCardIcon },
-    { id: 'savings', name: 'Relatório de Economia', icon: ArrowTrendingUpIcon }
+    { id: 'savings', name: 'Relatório de Economia', icon: ArrowTrendingUpIcon },
+    { id: 'account-balance', name: 'Relatório de Saldo', icon: ArrowDownTrayIcon }
   ];
 
   // Meses para filtro
@@ -96,6 +100,7 @@ function Reports() {
     let filteredFixedBills = [...fixedBills];
     let filteredDebts = [...debts];
     let filteredSavings = [...savingsGoals];
+    let filteredTransactions = [...accountBalance.transactions];
 
     // Aplicar filtro de data se especificado
     if (dateFilter.startDate || dateFilter.endDate) {
@@ -103,21 +108,24 @@ function Reports() {
       filteredFixedBills = filterDataByPeriod(fixedBills, dateFilter.startDate, dateFilter.endDate);
       filteredDebts = filterDataByPeriod(debts, dateFilter.startDate, dateFilter.endDate);
       filteredSavings = filterDataByPeriod(savingsGoals, dateFilter.startDate, dateFilter.endDate);
+      filteredTransactions = filterDataByPeriod(accountBalance.transactions, dateFilter.startDate, dateFilter.endDate);
     } else {
       // Aplicar filtro de mês/ano
       filteredExpenses = filterDataByMonthYear(expenses, selectedMonth, selectedYear);
       filteredFixedBills = filterDataByMonthYear(fixedBills, selectedMonth, selectedYear);
       filteredDebts = filterDataByMonthYear(debts, selectedMonth, selectedYear);
       filteredSavings = filterDataByMonthYear(savingsGoals, selectedMonth, selectedYear);
+      filteredTransactions = filterDataByMonthYear(accountBalance.transactions, selectedMonth, selectedYear);
     }
 
     setFilteredData({
       expenses: filteredExpenses,
       fixedBills: filteredFixedBills,
       debts: filteredDebts,
-      savings: filteredSavings
+      savings: filteredSavings,
+      transactions: filteredTransactions
     });
-  }, [expenses, fixedBills, debts, savingsGoals, dateFilter, selectedMonth, selectedYear]);
+  }, [expenses, fixedBills, debts, savingsGoals, accountBalance.transactions, dateFilter, selectedMonth, selectedYear]);
 
   // Calcular totais
   const calculateTotals = () => {
@@ -125,39 +133,326 @@ function Reports() {
     const totalFixedBills = filteredData.fixedBills.reduce((sum, bill) => sum + parseFloat(bill.amount), 0);
     const totalDebts = filteredData.debts.reduce((sum, debt) => sum + parseFloat(debt.remainingAmount), 0);
     const totalSavings = filteredData.savings.reduce((sum, goal) => sum + parseFloat(goal.currentAmount), 0);
+    const totalIncome = filteredData.transactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
+    const totalOutflows = filteredData.transactions.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0);
     
     return {
       expenses: totalExpenses,
       fixedBills: totalFixedBills,
       debts: totalDebts,
       savings: totalSavings,
+      income: totalIncome,
+      outflows: totalOutflows,
       total: totalExpenses + totalFixedBills + totalDebts
     };
   };
 
   const totals = calculateTotals();
 
-  // Função para exportar relatório
+  // Função para exportar relatório em PDF
   const exportReport = () => {
-    const reportData = {
-      periodo: dateFilter.startDate && dateFilter.endDate 
-        ? `${dateFilter.startDate} a ${dateFilter.endDate}`
-        : `${months[selectedMonth - 1].label} ${selectedYear}`,
-      tipo: reportTypes.find(r => r.id === reportType)?.name || 'Relatório Geral',
-      totais: totals,
-      dados: filteredData
-    };
-
-    const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `relatorio-${reportType}-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const doc = new jsPDF();
+    
+    // Configurações do documento
+    const pageWidth = doc.internal.pageSize.width;
+    const margin = 20;
+    let yPosition = 20;
+    
+    // Cabeçalho do relatório
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(44, 62, 80);
+    doc.text('RELATÓRIO FINANCEIRO', pageWidth / 2, yPosition, { align: 'center' });
+    
+    yPosition += 15;
+    
+    // Informações do período
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(52, 73, 94);
+    const periodo = dateFilter.startDate && dateFilter.endDate 
+      ? `${dateFilter.startDate} a ${dateFilter.endDate}`
+      : `${months[selectedMonth - 1].label} ${selectedYear}`;
+    doc.text(`Período: ${periodo}`, margin, yPosition);
+    
+    yPosition += 10;
+    doc.text(`Tipo: ${reportTypes.find(r => r.id === reportType)?.name || 'Relatório Geral'}`, margin, yPosition);
+    
+    yPosition += 10;
+    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, margin, yPosition);
+    
+    yPosition += 20;
+    
+    // Resumo dos totais
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(44, 62, 80);
+    doc.text('RESUMO FINANCEIRO', margin, yPosition);
+    
+    yPosition += 15;
+    
+    // Tabela de resumo
+    const summaryData = [
+      ['Despesas', `R$ ${totals.expenses.toFixed(2)}`],
+      ['Contas Fixas', `R$ ${totals.fixedBills.toFixed(2)}`],
+      ['Dívidas', `R$ ${totals.debts.toFixed(2)}`],
+      ['Economia', `R$ ${totals.savings.toFixed(2)}`],
+      ['Entradas', `R$ ${totals.income.toFixed(2)}`],
+      ['Saídas', `R$ ${totals.outflows.toFixed(2)}`]
+    ];
+    
+         autoTable(doc, {
+       startY: yPosition,
+       head: [['Categoria', 'Valor Total']],
+       body: summaryData,
+       theme: 'grid',
+       headStyles: {
+         fillColor: [44, 62, 80],
+         textColor: 255,
+         fontStyle: 'bold'
+       },
+       bodyStyles: {
+         textColor: 52,
+         fontSize: 10
+       },
+       margin: { left: margin, right: margin }
+     });
+    
+    yPosition = doc.lastAutoTable.finalY + 20;
+    
+    // Detalhes por categoria
+    if (reportType === 'all' || reportType === 'expenses') {
+      if (filteredData.expenses.length > 0) {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(44, 62, 80);
+        doc.text('DETALHES DE DESPESAS', margin, yPosition);
+        
+        yPosition += 10;
+        
+        const expensesData = filteredData.expenses.map(expense => [
+          expense.description,
+          `R$ ${parseFloat(expense.amount).toFixed(2)}`,
+          new Date(expense.date).toLocaleDateString('pt-BR'),
+          expense.category
+        ]);
+        
+                 autoTable(doc, {
+           startY: yPosition,
+           head: [['Descrição', 'Valor', 'Data', 'Categoria']],
+           body: expensesData,
+           theme: 'grid',
+           headStyles: {
+             fillColor: [231, 76, 60],
+             textColor: 255,
+             fontStyle: 'bold'
+           },
+           bodyStyles: {
+             textColor: 52,
+             fontSize: 9
+           },
+           margin: { left: margin, right: margin }
+         });
+        
+        yPosition = doc.lastAutoTable.finalY + 15;
+      }
+    }
+    
+    // Verificar se precisa de nova página
+    if (yPosition > doc.internal.pageSize.height - 50) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    
+    if (reportType === 'all' || reportType === 'fixed-bills') {
+      if (filteredData.fixedBills.length > 0) {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(44, 62, 80);
+        doc.text('DETALHES DE CONTAS FIXAS', margin, yPosition);
+        
+        yPosition += 10;
+        
+        const fixedBillsData = filteredData.fixedBills.map(bill => [
+          bill.description,
+          `R$ ${parseFloat(bill.amount).toFixed(2)}`,
+          `Dia ${bill.dueDay}`,
+          bill.isPaid ? 'Pago' : 'Pendente'
+        ]);
+        
+                 autoTable(doc, {
+           startY: yPosition,
+           head: [['Descrição', 'Valor', 'Vencimento', 'Status']],
+           body: fixedBillsData,
+           theme: 'grid',
+           headStyles: {
+             fillColor: [243, 156, 18],
+             textColor: 255,
+             fontStyle: 'bold'
+           },
+           bodyStyles: {
+             textColor: 52,
+             fontSize: 9
+           },
+           margin: { left: margin, right: margin }
+         });
+        
+        yPosition = doc.lastAutoTable.finalY + 15;
+      }
+    }
+    
+    // Verificar se precisa de nova página
+    if (yPosition > doc.internal.pageSize.height - 50) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    
+    if (reportType === 'all' || reportType === 'debts') {
+      if (filteredData.debts.length > 0) {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(44, 62, 80);
+        doc.text('DETALHES DE DÍVIDAS', margin, yPosition);
+        
+        yPosition += 10;
+        
+        const debtsData = filteredData.debts.map(debt => [
+          debt.description,
+          `R$ ${parseFloat(debt.remainingAmount).toFixed(2)}`,
+          `${debt.remainingInstallments} / ${debt.installments}`,
+          debt.priority
+        ]);
+        
+                 autoTable(doc, {
+           startY: yPosition,
+           head: [['Descrição', 'Valor Restante', 'Parcelas', 'Prioridade']],
+           body: debtsData,
+           theme: 'grid',
+           headStyles: {
+             fillColor: [192, 57, 43],
+             textColor: 255,
+             fontStyle: 'bold'
+           },
+           bodyStyles: {
+             textColor: 52,
+             fontSize: 9
+           },
+           margin: { left: margin, right: margin }
+         });
+        
+        yPosition = doc.lastAutoTable.finalY + 15;
+      }
+    }
+    
+    // Verificar se precisa de nova página
+    if (yPosition > doc.internal.pageSize.height - 50) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    
+    if (reportType === 'all' || reportType === 'savings') {
+      if (filteredData.savings.length > 0) {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(44, 62, 80);
+        doc.text('DETALHES DE ECONOMIA', margin, yPosition);
+        
+        yPosition += 10;
+        
+        const savingsData = filteredData.savings.map(goal => {
+          const percentage = (goal.currentAmount / goal.targetAmount) * 100;
+          return [
+            goal.description,
+            `R$ ${parseFloat(goal.currentAmount).toFixed(2)}`,
+            `R$ ${parseFloat(goal.targetAmount).toFixed(2)}`,
+            `${percentage.toFixed(1)}%`
+          ];
+        });
+        
+                 autoTable(doc, {
+           startY: yPosition,
+           head: [['Descrição', 'Valor Atual', 'Meta', 'Progresso']],
+           body: savingsData,
+           theme: 'grid',
+           headStyles: {
+             fillColor: [39, 174, 96],
+             textColor: 255,
+             fontStyle: 'bold'
+           },
+           bodyStyles: {
+             textColor: 52,
+             fontSize: 9
+           },
+           margin: { left: margin, right: margin }
+         });
+        
+        yPosition = doc.lastAutoTable.finalY + 15;
+      }
+    }
+    
+    // Verificar se precisa de nova página
+    if (yPosition > doc.internal.pageSize.height - 50) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    
+    if (reportType === 'all' || reportType === 'account-balance') {
+      if (filteredData.transactions.length > 0) {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(44, 62, 80);
+        doc.text('DETALHES DE TRANSAÇÕES', margin, yPosition);
+        
+        yPosition += 10;
+        
+        const transactionsData = filteredData.transactions.map(transaction => [
+          new Date(transaction.date).toLocaleDateString('pt-BR'),
+          transaction.description,
+          transaction.category,
+          `${transaction.amount >= 0 ? '+' : ''}R$ ${transaction.amount.toFixed(2)}`
+        ]);
+        
+                 autoTable(doc, {
+           startY: yPosition,
+           head: [['Data', 'Descrição', 'Categoria', 'Valor']],
+           body: transactionsData,
+           theme: 'grid',
+           headStyles: {
+             fillColor: [52, 152, 219],
+             textColor: 255,
+             fontStyle: 'bold'
+           },
+           bodyStyles: {
+             textColor: 52,
+             fontSize: 9
+           },
+           margin: { left: margin, right: margin }
+         });
+      }
+    }
+    
+    // Rodapé
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(128);
+      doc.text(
+        `Página ${i} de ${totalPages} - Sistema Financeiro`,
+        pageWidth / 2,
+        doc.internal.pageSize.height - 10,
+        { align: 'center' }
+      );
+    }
+    
+         // Salvar o PDF
+     const reportTypeName = reportTypes.find(r => r.id === reportType)?.name || 'Geral';
+     const fileName = `Relatório ${reportTypeName} - ${periodo}.pdf`;
+     doc.save(fileName);
   };
+
+
 
   // Função para limpar filtros
   const clearFilters = () => {
@@ -172,13 +467,13 @@ function Reports() {
       {/* Cabeçalho */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Relatórios</h1>
-        <div className="flex space-x-3">
+                <div className="flex space-x-3">
           <button
             onClick={exportReport}
             className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
           >
             <ArrowDownTrayIcon className="-ml-1 mr-2 h-5 w-5" />
-            Exportar Relatório
+            Exportar PDF
           </button>
         </div>
       </div>
@@ -287,7 +582,7 @@ function Reports() {
       </div>
 
       {/* Resumo dos Totais */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-6">
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
@@ -353,6 +648,42 @@ function Reports() {
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Economizado</dt>
                   <dd className="flex items-baseline">
                     <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">R$ {totals.savings.toFixed(2)}</div>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900/30 rounded-md p-3">
+                <ArrowDownTrayIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Entradas</dt>
+                  <dd className="flex items-baseline">
+                    <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">R$ {totals.income.toFixed(2)}</div>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 bg-red-100 dark:bg-red-900/30 rounded-md p-3">
+                <ArrowDownTrayIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Saídas</dt>
+                  <dd className="flex items-baseline">
+                    <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">R$ {totals.outflows.toFixed(2)}</div>
                   </dd>
                 </dl>
               </div>
@@ -492,6 +823,41 @@ function Reports() {
                       </tr>
                     );
                   })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Transações de Saldo */}
+        {(reportType === 'all' || reportType === 'account-balance') && (
+          <div className="mb-6">
+            <h3 className="text-md font-medium text-gray-900 dark:text-gray-100 mb-3">Transações de Saldo ({filteredData.transactions.length})</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Data</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Descrição</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Categoria</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Valor</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {filteredData.transactions.map((transaction) => (
+                    <tr key={transaction.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {new Date(transaction.date).toLocaleDateString('pt-BR')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{transaction.description}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{transaction.category}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <span className={`font-semibold ${transaction.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {transaction.amount >= 0 ? '+' : ''}R$ {transaction.amount.toFixed(2)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useAppContext } from '../context/AppContext';
+import useAlert from '../hooks/useAlert';
+import Alert from '../components/Alert';
 
 function Expenses() {
   // Usar o contexto global para acessar as despesas
   const { expenses, addExpense, updateExpense, deleteExpense } = useAppContext();
+  
+  // Hook para gerenciar alertas
+  const { alert, showDeleteConfirm, showEditConfirm, showSuccess, showError, hideAlert } = useAlert();
 
   // Estado para o formulário de nova despesa
   const [newExpense, setNewExpense] = useState({
@@ -41,40 +46,64 @@ function Expenses() {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (editMode) {
-      // Atualizar despesa existente
-      updateExpense(editId, { ...newExpense, id: editId });
-      setEditMode(false);
-      setEditId(null);
-    } else {
-      // Adicionar nova despesa
-      addExpense(newExpense);
+    // Validação básica
+    if (!newExpense.description || !newExpense.amount || !newExpense.date || !newExpense.category) {
+      showError('Por favor, preencha todos os campos obrigatórios.');
+      return;
     }
     
-    // Limpar formulário
-    setNewExpense({
-      description: '',
-      amount: '',
-      date: '',
-      category: '',
-    });
+    try {
+      if (editMode) {
+        // Atualizar despesa existente
+        updateExpense(editId, { ...newExpense, id: editId });
+        setEditMode(false);
+        setEditId(null);
+        showSuccess('Despesa atualizada com sucesso!');
+      } else {
+        // Adicionar nova despesa
+        addExpense(newExpense);
+        showSuccess('Despesa adicionada com sucesso!');
+      }
+      
+      // Limpar formulário
+      setNewExpense({
+        description: '',
+        amount: '',
+        date: '',
+        category: '',
+      });
+    } catch (error) {
+      showError('Erro ao salvar despesa. Tente novamente.');
+    }
   };
 
   // Função para iniciar a edição de uma despesa
   const handleEdit = (expense) => {
-    setNewExpense({
-      description: expense.description,
-      amount: expense.amount,
-      date: expense.date,
-      category: expense.category,
+    showEditConfirm(expense.description, () => {
+      setNewExpense({
+        description: expense.description,
+        amount: expense.amount,
+        date: expense.date,
+        category: expense.category,
+      });
+      setEditMode(true);
+      setEditId(expense.id);
     });
-    setEditMode(true);
-    setEditId(expense.id);
   };
 
   // Função para excluir uma despesa
   const handleDelete = (id) => {
-    deleteExpense(id);
+    const expense = expenses.find(exp => exp.id === id);
+    if (expense) {
+      showDeleteConfirm(expense.description, () => {
+        try {
+          deleteExpense(id);
+          showSuccess('Despesa excluída com sucesso!');
+        } catch (error) {
+          showError('Erro ao excluir despesa. Tente novamente.');
+        }
+      });
+    }
   };
 
   // Função para lidar com mudanças nos filtros
@@ -381,6 +410,17 @@ function Expenses() {
           </table>
         </div>
       </div>
+      
+      {/* Componente de Alerta */}
+      <Alert
+        show={alert.show}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        onConfirm={alert.onConfirm}
+        onCancel={alert.onCancel}
+        onClose={hideAlert}
+      />
     </div>
   );
 }
