@@ -3,6 +3,8 @@ import { Outlet, NavLink } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import useAlert from '../hooks/useAlert';
+import Alert from './Alert';
 import { 
   HomeIcon, 
   CreditCardIcon, 
@@ -17,7 +19,8 @@ import {
   SunIcon,
   MoonIcon,
   ArrowRightOnRectangleIcon,
-  UserCircleIcon
+  UserCircleIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 
 function Layout() {
@@ -26,6 +29,7 @@ function Layout() {
   const { isDarkMode, toggleTheme } = useTheme();
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
+  const { alert, showLogoutConfirm, hideAlert } = useAlert();
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -42,6 +46,10 @@ function Layout() {
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
+  };
+
+  const handleLogoutClick = () => {
+    showLogoutConfirm(handleLogout);
   };
 
   const handleEditProfile = () => {
@@ -68,6 +76,7 @@ function Layout() {
     { name: 'Despesas', path: '/expenses', icon: CreditCardIcon },
     { name: 'Economia', path: '/savings', icon: ArrowTrendingUpIcon },
     { name: 'Relatórios', path: '/reports', icon: DocumentChartBarIcon },
+    { name: 'Suporte', path: '/support', icon: ChatBubbleLeftRightIcon },
   ];
 
   return (
@@ -112,7 +121,7 @@ function Layout() {
             
             {/* Botão Sair */}
             <button
-              onClick={handleLogout}
+              onClick={handleLogoutClick}
               className="flex items-center px-4 py-2 text-sm font-medium rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 w-full"
             >
               <ArrowRightOnRectangleIcon className="w-5 h-5 mr-3" />
@@ -150,7 +159,7 @@ function Layout() {
             
             {/* Botão Sair */}
             <button
-              onClick={handleLogout}
+              onClick={handleLogoutClick}
               className="flex items-center px-4 py-2 text-sm font-medium rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 w-full"
             >
               <ArrowRightOnRectangleIcon className="w-5 h-5 mr-3" />
@@ -213,6 +222,13 @@ function Layout() {
                 <MoonIcon className="w-5 h-5" />
               )}
             </button>
+            <button
+              onClick={handleLogoutClick}
+              className="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-200"
+              title="Sair"
+            >
+              <ArrowRightOnRectangleIcon className="w-5 h-5" />
+            </button>
           </div>
         </header>
 
@@ -221,6 +237,21 @@ function Layout() {
           <Outlet />
         </main>
       </div>
+      
+      {/* Componente de Alert */}
+      <Alert
+        show={alert.show}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        onConfirm={alert.onConfirm}
+        onCancel={alert.onCancel}
+        onClose={hideAlert}
+        showCheckbox={alert.showCheckbox}
+        checkboxLabel={alert.checkboxLabel}
+        checkboxChecked={alert.checkboxChecked}
+        onCheckboxChange={alert.onCheckboxChange}
+      />
     </div>
   );
 }

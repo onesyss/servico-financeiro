@@ -56,22 +56,56 @@ function Dashboard() {
     updateMonthlyChartData();
   }, [expenses, selectedMonth, selectedYear]);
 
+  // Atualizar cores quando o tema mudar
+  useEffect(() => {
+    updateChartData();
+    updateMonthlyChartData();
+  }, [document.documentElement.classList.contains('dark')]);
+
+  // Forçar re-render dos gráficos quando o tema mudar
+  useEffect(() => {
+    const handleThemeChange = () => {
+      // Forçar re-render dos componentes de gráfico
+      setExpenseChartData(prev => ({ ...prev }));
+      setMonthlyChartData(prev => ({ ...prev }));
+    };
+
+    // Observar mudanças na classe do documento
+    const observer = new MutationObserver(handleThemeChange);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   // Função para atualizar dados do gráfico de categorias
   const updateChartData = () => {
     const categories = getExpensesByCategory(selectedMonth, selectedYear);
     const labels = Object.keys(categories);
     const data = Object.values(categories);
     
-    // Cores para as categorias
-    const backgroundColors = [
-      'rgba(99, 102, 241, 0.6)',   // Indigo
-      'rgba(239, 68, 68, 0.6)',    // Red
-      'rgba(16, 185, 129, 0.6)',   // Green
-      'rgba(245, 158, 11, 0.6)',   // Amber
-      'rgba(14, 165, 233, 0.6)',   // Sky
-      'rgba(168, 85, 247, 0.6)',   // Purple
-      'rgba(236, 72, 153, 0.6)',   // Pink
-      'rgba(59, 130, 246, 0.6)',   // Blue
+    // Cores para as categorias - adaptadas para modo escuro
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const backgroundColors = isDarkMode ? [
+      'rgba(139, 92, 246, 0.9)',   // Violet (mais vibrante no escuro)
+      'rgba(239, 68, 68, 0.9)',    // Red (mais intenso)
+      'rgba(34, 197, 94, 0.9)',    // Green (mais brilhante)
+      'rgba(245, 158, 11, 0.9)',   // Amber (mantido)
+      'rgba(14, 165, 233, 0.9)',   // Sky (mais vibrante)
+      'rgba(168, 85, 247, 0.9)',   // Purple (mantido)
+      'rgba(236, 72, 153, 0.9)',   // Pink (mais intenso)
+      'rgba(59, 130, 246, 0.9)',   // Blue (mais vibrante)
+    ] : [
+      'rgba(79, 70, 229, 0.8)',    // Indigo (mais escuro)
+      'rgba(220, 38, 38, 0.8)',    // Red (mais escuro)
+      'rgba(5, 150, 105, 0.8)',    // Green (mais escuro)
+      'rgba(217, 119, 6, 0.8)',    // Amber (mais escuro)
+      'rgba(2, 132, 199, 0.8)',    // Sky (mais escuro)
+      'rgba(147, 51, 234, 0.8)',   // Purple (mais escuro)
+      'rgba(219, 39, 119, 0.8)',   // Pink (mais escuro)
+      'rgba(37, 99, 235, 0.8)',    // Blue (mais escuro)
     ];
     
     const borderColors = backgroundColors.map(color => color.replace('0.6', '1'));
@@ -109,14 +143,15 @@ function Dashboard() {
       monthlyData.push(totalExpenses);
     }
     
+    const isDarkMode = document.documentElement.classList.contains('dark');
     setMonthlyChartData({
       labels: months,
       datasets: [{
         label: 'Gastos Mensais',
         data: monthlyData,
-        backgroundColor: 'rgba(99, 102, 241, 0.5)',
-        borderColor: 'rgb(99, 102, 241)',
-        borderWidth: 1,
+        backgroundColor: isDarkMode ? 'rgba(139, 92, 246, 0.8)' : 'rgba(67, 56, 202, 0.9)',
+        borderColor: isDarkMode ? 'rgb(139, 92, 246)' : 'rgb(67, 56, 202)',
+        borderWidth: 2,
       }],
     });
   };
@@ -128,44 +163,86 @@ function Dashboard() {
   const totalSavings = calculateTotalSavings();
   const totalBankBalance = getTotalBankBalance();
 
-  // Configurações dos gráficos
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#374151',
-        },
-      },
-    },
-  };
-
-  const barChartOptions = {
-    ...chartOptions,
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#374151',
-          callback: function(value) {
-            return 'R$ ' + value.toFixed(2);
+  // Função para obter configurações dos gráficos baseadas no tema atual
+  const getChartOptions = () => {
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: isDarkMode ? '#e5e7eb' : '#1f2937',
+            font: {
+              size: 12,
+              weight: '600'
+            },
+            padding: 15,
+            usePointStyle: true,
           },
         },
-        grid: {
-          color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb',
+        tooltip: {
+          backgroundColor: isDarkMode ? 'rgba(17, 24, 39, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+          titleColor: isDarkMode ? '#e5e7eb' : '#1f2937',
+          bodyColor: isDarkMode ? '#d1d5db' : '#374151',
+          borderColor: isDarkMode ? '#374151' : '#e5e7eb',
+          borderWidth: 1,
+          cornerRadius: 8,
+          displayColors: true,
         },
       },
-      x: {
-        ticks: {
-          color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#374151',
+    };
+  };
+
+  // Função para obter configurações do gráfico de barras baseadas no tema atual
+  const getBarChartOptions = () => {
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const chartOptions = getChartOptions();
+    
+    return {
+      ...chartOptions,
+      backgroundColor: isDarkMode ? 'rgba(17, 24, 39, 0.1)' : 'rgba(249, 250, 251, 0.5)',
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: isDarkMode ? '#f9fafb' : '#111827',
+            font: {
+              size: 11,
+              weight: '600'
+            },
+            callback: function(value) {
+              return 'R$ ' + value.toFixed(2);
+            },
+          },
+          grid: {
+            color: isDarkMode ? 'rgba(55, 65, 81, 0.3)' : 'rgba(156, 163, 175, 0.4)',
+            lineWidth: 1,
+          },
+          border: {
+            color: isDarkMode ? '#374151' : '#d1d5db',
+          },
         },
-        grid: {
-          color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb',
+        x: {
+          ticks: {
+            color: isDarkMode ? '#f9fafb' : '#111827',
+            font: {
+              size: 11,
+              weight: '600'
+            },
+          },
+          grid: {
+            color: isDarkMode ? 'rgba(55, 65, 81, 0.3)' : 'rgba(156, 163, 175, 0.4)',
+            lineWidth: 1,
+          },
+          border: {
+            color: isDarkMode ? '#374151' : '#d1d5db',
+          },
         },
       },
-    },
+    };
   };
 
   return (
@@ -180,10 +257,10 @@ function Dashboard() {
 
       {/* Cards de resumo */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-6">
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg dashboard-card">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg dark:shadow-gray-900/20 rounded-xl border border-gray-100 dark:border-gray-700 dashboard-card hover:shadow-xl dark:hover:shadow-gray-900/30 transition-all duration-300">
           <div className="p-5">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900/30 rounded-md p-3">
+              <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900/40 rounded-lg p-3">
                 <WalletIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="ml-5 w-0 flex-1">
@@ -200,10 +277,10 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg dashboard-card">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg dark:shadow-gray-900/20 rounded-xl border border-gray-100 dark:border-gray-700 dashboard-card hover:shadow-xl dark:hover:shadow-gray-900/30 transition-all duration-300">
           <div className="p-5">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-purple-100 dark:bg-purple-900/30 rounded-md p-3">
+              <div className="flex-shrink-0 bg-purple-100 dark:bg-purple-900/40 rounded-lg p-3">
                 <BuildingLibraryIcon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div className="ml-5 w-0 flex-1">
@@ -220,10 +297,10 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg dashboard-card">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg dark:shadow-gray-900/20 rounded-xl border border-gray-100 dark:border-gray-700 dashboard-card hover:shadow-xl dark:hover:shadow-gray-900/30 transition-all duration-300">
           <div className="p-5">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-yellow-100 dark:bg-yellow-900/30 rounded-md p-3">
+              <div className="flex-shrink-0 bg-yellow-100 dark:bg-yellow-900/40 rounded-lg p-3">
                 <BanknotesIcon className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
               </div>
               <div className="ml-5 w-0 flex-1">
@@ -238,10 +315,10 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg dashboard-card">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg dark:shadow-gray-900/20 rounded-xl border border-gray-100 dark:border-gray-700 dashboard-card hover:shadow-xl dark:hover:shadow-gray-900/30 transition-all duration-300">
           <div className="p-5">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-red-100 dark:bg-red-900/30 rounded-md p-3">
+              <div className="flex-shrink-0 bg-red-100 dark:bg-red-900/40 rounded-lg p-3">
                 <CreditCardIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
               <div className="ml-5 w-0 flex-1">
@@ -256,10 +333,10 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg dashboard-card">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg dark:shadow-gray-900/20 rounded-xl border border-gray-100 dark:border-gray-700 dashboard-card hover:shadow-xl dark:hover:shadow-gray-900/30 transition-all duration-300">
           <div className="p-5">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-primary-100 dark:bg-primary-900/30 rounded-md p-3">
+              <div className="flex-shrink-0 bg-primary-100 dark:bg-primary-900/40 rounded-lg p-3">
                 <CalendarIcon className="h-6 w-6 text-primary-600 dark:text-primary-400" />
               </div>
               <div className="ml-5 w-0 flex-1">
@@ -274,10 +351,10 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg dashboard-card">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg dark:shadow-gray-900/20 rounded-xl border border-gray-100 dark:border-gray-700 dashboard-card hover:shadow-xl dark:hover:shadow-gray-900/30 transition-all duration-300">
           <div className="p-5">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-green-100 dark:bg-green-900/30 rounded-md p-3">
+              <div className="flex-shrink-0 bg-green-100 dark:bg-green-900/40 rounded-lg p-3">
                 <ArrowTrendingUpIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
               <div className="ml-5 w-0 flex-1">
@@ -294,7 +371,7 @@ function Dashboard() {
       </div>
 
       {/* Seletor de mês e ano */}
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+                  <div className="bg-white dark:bg-gray-800 shadow-lg dark:shadow-gray-900/20 rounded-xl border border-gray-100 dark:border-gray-700 p-6">
         <div className="flex flex-wrap items-center justify-between mb-4">
           <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Análise de Gastos</h2>
           <div className="flex space-x-4">
@@ -339,11 +416,11 @@ function Dashboard() {
         {/* Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Gráfico de pizza - Gastos por categoria */}
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg dark:shadow-gray-900/20 border border-gray-100 dark:border-gray-700">
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Gastos por Categoria</h3>
             <div className="h-64">
               {expenseChartData.labels.length > 0 ? (
-                <Doughnut data={expenseChartData} options={chartOptions} />
+                <Doughnut data={expenseChartData} options={getChartOptions()} />
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
                   Nenhum dado disponível para o período selecionado
@@ -353,10 +430,10 @@ function Dashboard() {
           </div>
 
           {/* Gráfico de barras - Gastos mensais */}
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg dark:shadow-gray-900/20 border border-gray-100 dark:border-gray-700">
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Gastos dos Últimos 6 Meses</h3>
             <div className="h-64">
-              <Bar data={monthlyChartData} options={barChartOptions} />
+              <Bar data={monthlyChartData} options={getBarChartOptions()} />
             </div>
           </div>
         </div>
@@ -364,7 +441,7 @@ function Dashboard() {
 
       {/* Resumo das contas bancárias */}
       {bankAccounts.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <div className="bg-white dark:bg-gray-800 shadow-lg dark:shadow-gray-900/20 rounded-xl border border-gray-100 dark:border-gray-700 p-6">
           <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Resumo das Contas Bancárias</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {bankAccounts.map((account) => (

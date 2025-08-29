@@ -14,7 +14,11 @@ const Alert = ({
   onConfirm, 
   onCancel, 
   show = false, 
-  onClose 
+  onClose,
+  showCheckbox = false,
+  checkboxLabel = '',
+  checkboxChecked = false,
+  onCheckboxChange = null
 }) => {
   if (!show) return null;
 
@@ -90,6 +94,22 @@ const Alert = ({
                   <p className={`text-sm ${config.messageColor}`}>
                     {message}
                   </p>
+                </div>
+              )}
+              
+              {showCheckbox && (
+                <div className="mt-3">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={checkboxChecked}
+                      onChange={(e) => onCheckboxChange && onCheckboxChange(e.target.checked)}
+                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    />
+                    <span className={`ml-2 text-sm ${config.messageColor}`}>
+                      {checkboxLabel}
+                    </span>
+                  </label>
                 </div>
               )}
             </div>

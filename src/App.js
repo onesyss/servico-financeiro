@@ -13,6 +13,7 @@ import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
 import EmailVerification from './pages/EmailVerification';
 import Profile from './pages/Profile';
+import Support from './pages/Support';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider } from './context/AppContext';
@@ -56,6 +57,7 @@ function AuthenticatedApp() {
           <Route path="account-balance" element={<AccountBalance />} />
           <Route path="financial-entries" element={<FinancialEntries />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="support" element={<Support />} />
           <Route path="profile" element={<Profile />} />
         </Route>
       </Routes>

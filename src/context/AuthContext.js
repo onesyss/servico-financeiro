@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   // Função para cadastrar usuário
-  const signup = async (email, password, name) => {
+  const signup = async (email, password, name, phone, state, city, address, houseNumber, zipCode) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
@@ -39,6 +39,12 @@ export const AuthProvider = ({ children }) => {
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         name: name,
         email: email,
+        phone: phone || '',
+        state: state || '',
+        city: city || '',
+        address: address || '',
+        houseNumber: houseNumber || '',
+        zipCode: zipCode || '',
         createdAt: new Date(),
         expenses: [],
         debts: [],

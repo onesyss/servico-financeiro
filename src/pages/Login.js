@@ -8,11 +8,15 @@ import {
   EyeIcon,
   EyeSlashIcon,
   ArrowLeftIcon,
-  SparklesIcon
+  SparklesIcon,
+  PhoneIcon,
+  MapPinIcon,
+  BuildingOfficeIcon
 } from '@heroicons/react/24/outline';
 import useAlert from '../hooks/useAlert';
 import Alert from '../components/Alert';
 import Logo from '../components/Logo';
+
 
 function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -22,8 +26,16 @@ function Login() {
     name: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    phone: '',
+    state: '',
+    city: '',
+    address: '',
+    houseNumber: '',
+    zipCode: ''
   });
+
+
 
   const { login, signup, resetPassword } = useAuth();
   const navigate = useNavigate();
@@ -31,7 +43,7 @@ function Login() {
 
   const validatePassword = (password) => {
     const minLength = 6;
-    const maxLength = 9;
+    const maxLength = 15;
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumbers = /\d/.test(password);
@@ -58,6 +70,22 @@ function Login() {
     return null;
   };
 
+  const validatePhone = (phone) => {
+    const phoneRegex = /^\(\d{2}\)\s\d{4,5}-\d{4}$/;
+    if (!phoneRegex.test(phone)) {
+      return 'Telefone deve estar no formato (11) 99999-9999';
+    }
+    return null;
+  };
+
+  const validateZipCode = (zipCode) => {
+    const zipCodeRegex = /^\d{5}-\d{3}$/;
+    if (!zipCodeRegex.test(zipCode)) {
+      return 'CEP deve estar no formato 12345-678';
+    }
+    return null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -74,8 +102,9 @@ function Login() {
         navigate('/');
       } else {
         // Cadastro
-        if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
-          showError('Por favor, preencha todos os campos.');
+        if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword || 
+            !formData.phone) {
+          showError('Por favor, preencha todos os campos obrigatórios.');
           return;
         }
 
@@ -90,7 +119,19 @@ function Login() {
           return;
         }
 
-        await signup(formData.email, formData.password, formData.name);
+        const phoneError = validatePhone(formData.phone);
+        if (phoneError) {
+          showError(phoneError);
+          return;
+        }
+
+        const zipCodeError = validateZipCode(formData.zipCode);
+        if (zipCodeError) {
+          showError(zipCodeError);
+          return;
+        }
+
+        await signup(formData.email, formData.password, formData.name, formData.phone, formData.state, formData.city, formData.address, formData.houseNumber, formData.zipCode);
         showSuccess('Conta criada com sucesso!');
         navigate('/');
       }
@@ -119,10 +160,51 @@ function Login() {
     }
   };
 
+  const formatPhone = (value) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 11) {
+      if (numbers.length === 11) {
+        return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+      } else if (numbers.length === 10) {
+        return numbers.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+      } else if (numbers.length >= 7) {
+        return numbers.replace(/(\d{2})(\d{4,5})/, '($1) $2');
+      } else if (numbers.length >= 3) {
+        return numbers.replace(/(\d{2})/, '($1)');
+      }
+      return numbers;
+    }
+    // Se exceder 11 dígitos, retorna apenas os primeiros 11 dígitos formatados
+    const limitedNumbers = numbers.substring(0, 11);
+    return limitedNumbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+  };
+
+  const formatZipCode = (value) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 8) {
+      return numbers.replace(/(\d{5})(\d{3})/, '$1-$2');
+    }
+    // Se exceder 8 dígitos, retorna apenas os primeiros 8 dígitos formatados
+    const limitedNumbers = numbers.substring(0, 8);
+    return limitedNumbers.replace(/(\d{5})(\d{3})/, '$1-$2');
+  };
+
   const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    let formattedValue = value;
+
+    if (name === 'phone') {
+      formattedValue = formatPhone(value);
+    } else if (name === 'zipCode') {
+      formattedValue = formatZipCode(value);
+    } else if (name === 'password' || name === 'confirmPassword') {
+      // Limitar senhas a 15 caracteres
+      formattedValue = value.substring(0, 15);
+    }
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: formattedValue
     });
   };
 
@@ -196,7 +278,7 @@ function Login() {
                   <button
                     onClick={() => {
                       setShowForgotPassword(false);
-                      setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+                      setFormData({ name: '', email: '', password: '', confirmPassword: '', phone: '', state: '', city: '', address: '', houseNumber: '', zipCode: '' });
                     }}
                     className="font-medium text-primary-600 dark:text-primary-400 hover:text-primary-500 transition-colors"
                   >
@@ -210,7 +292,7 @@ function Login() {
                   <button
                     onClick={() => {
                       setIsLogin(!isLogin);
-                      setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+                      setFormData({ name: '', email: '', password: '', confirmPassword: '', phone: '', state: '', city: '', address: '', houseNumber: '', zipCode: '' });
                     }}
                     className="font-medium text-primary-600 dark:text-primary-400 hover:text-primary-500 transition-colors"
                   >
@@ -262,29 +344,144 @@ function Login() {
                 <form className="space-y-6" onSubmit={handleSubmit}>
               <div className="space-y-5">
                 {!isLogin && (
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Nome completo
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="name"
-                        name="name"
-                        type="text"
-                        required={!isLogin}
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        className="appearance-none relative block w-full px-4 py-3 pl-12 border border-gray-200 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
-                        placeholder="Seu nome completo"
-                      />
-                      <UserIcon className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
+                  <>
+                                         <div>
+                       <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                         Nome completo *
+                       </label>
+                      <div className="relative">
+                        <input
+                          id="name"
+                          name="name"
+                          type="text"
+                          required={!isLogin}
+                          value={formData.name}
+                          onChange={handleInputChange}
+                          className="appearance-none relative block w-full px-4 py-3 pl-12 border border-gray-200 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
+                          placeholder="Seu nome completo"
+                        />
+                        <UserIcon className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
+                      </div>
                     </div>
-                  </div>
+
+                                         <div>
+                       <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                         Telefone *
+                       </label>
+                      <div className="relative">
+                        <input
+                          id="phone"
+                          name="phone"
+                          type="tel"
+                          required={!isLogin}
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          className="appearance-none relative block w-full px-4 py-3 pl-12 border border-gray-200 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
+                          placeholder="(11) 99999-9999"
+                        />
+                        <PhoneIcon className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="state" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Estado
+                        </label>
+                        <div className="relative">
+                          <input
+                            id="state"
+                            name="state"
+                            type="text"
+                            value={formData.state}
+                            onChange={handleInputChange}
+                            className="appearance-none relative block w-full px-4 py-3 pl-12 border border-gray-200 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
+                            placeholder="SP"
+                          />
+                          <MapPinIcon className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="city" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Cidade
+                        </label>
+                        <div className="relative">
+                          <input
+                            id="city"
+                            name="city"
+                            type="text"
+                            value={formData.city}
+                            onChange={handleInputChange}
+                            className="appearance-none relative block w-full px-4 py-3 pl-12 border border-gray-200 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
+                            placeholder="São Paulo"
+                          />
+                          <BuildingOfficeIcon className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="col-span-2">
+                        <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Endereço
+                        </label>
+                        <div className="relative">
+                          <input
+                            id="address"
+                            name="address"
+                            type="text"
+                            value={formData.address}
+                            onChange={handleInputChange}
+                            className="appearance-none relative block w-full px-4 py-3 pl-12 border border-gray-200 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
+                            placeholder="Rua das Flores"
+                          />
+                          <MapPinIcon className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="houseNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Número
+                        </label>
+                        <div className="relative">
+                          <input
+                            id="houseNumber"
+                            name="houseNumber"
+                            type="text"
+                            value={formData.houseNumber}
+                            onChange={handleInputChange}
+                            className="appearance-none relative block w-full px-4 py-3 pl-12 border border-gray-200 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
+                            placeholder="123"
+                          />
+                          <MapPinIcon className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
+                        </div>
+                      </div>
+                    </div>
+
+                                                              <div>
+                       <label htmlFor="zipCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                         CEP
+                       </label>
+                       <div className="relative">
+                         <input
+                           id="zipCode"
+                           name="zipCode"
+                           type="text"
+                           value={formData.zipCode}
+                           onChange={handleInputChange}
+                           className="appearance-none relative block w-full px-4 py-3 pl-12 border border-gray-200 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
+                           placeholder="01234-567"
+                         />
+                         <MapPinIcon className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
+                       </div>
+                     </div>
+                  </>
                 )}
 
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Email
+                    Email *
                   </label>
                   <div className="relative">
                     <input
@@ -300,12 +497,19 @@ function Login() {
                     />
                     <EnvelopeIcon className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
                   </div>
+                  {!isLogin && (
+                    <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                      <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                        <strong>⚠️ Atenção:</strong> O email não poderá ser alterado após o cadastro.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Senha
-                  </label>
+                                 <div>
+                   <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                     Senha *
+                   </label>
                   <div className="relative">
                     <input
                       id="password"
@@ -316,7 +520,7 @@ function Login() {
                       value={formData.password}
                       onChange={handleInputChange}
                       className="appearance-none relative block w-full px-4 py-3 pl-12 pr-12 border border-gray-200 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
-                      placeholder={isLogin ? 'Sua senha' : 'Entre 6-9 caracteres com maiúscula, minúscula, número e caractere especial'}
+                                             placeholder={isLogin ? 'Sua senha' : 'Entre 6-15 caracteres com maiúscula, minúscula, número e caractere especial'}
                     />
                     <LockClosedIcon className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
                     <button
@@ -335,10 +539,10 @@ function Login() {
                     <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                       <p className="text-xs font-medium text-blue-800 dark:text-blue-200 mb-2">A senha deve conter:</p>
                       <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
-                        <li className="flex items-center">
-                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></div>
-                          Entre 6 e 9 caracteres
-                        </li>
+                                                 <li className="flex items-center">
+                           <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></div>
+                           Entre 6 e 15 caracteres
+                         </li>
                         <li className="flex items-center">
                           <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></div>
                           Uma letra maiúscula (A-Z)
@@ -360,11 +564,11 @@ function Login() {
                   )}
                 </div>
 
-                {!isLogin && (
-                  <div>
-                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Confirmar senha
-                    </label>
+                                 {!isLogin && (
+                   <div>
+                     <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                       Confirmar senha *
+                     </label>
                     <div className="relative">
                       <input
                         id="confirmPassword"

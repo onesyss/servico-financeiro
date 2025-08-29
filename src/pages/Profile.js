@@ -7,11 +7,17 @@ import {
   LockClosedIcon,
   EyeIcon,
   EyeSlashIcon,
-  ArrowLeftIcon
+  ArrowLeftIcon,
+  PhoneIcon,
+  MapPinIcon,
+  BuildingOfficeIcon
 } from '@heroicons/react/24/outline';
 import useAlert from '../hooks/useAlert';
 import Alert from '../components/Alert';
 import { updateProfile, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase/config';
+
 
 function Profile() {
   const { currentUser, logout } = useAuth();
@@ -21,10 +27,18 @@ function Profile() {
   const [formData, setFormData] = useState({
     displayName: '',
     email: '',
+    phone: '',
+    state: '',
+    city: '',
+    address: '',
+    houseNumber: '',
+    zipCode: '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
+
+
 
   const [showPasswords, setShowPasswords] = useState({
     current: false,
@@ -40,15 +54,64 @@ function Profile() {
       setFormData(prev => ({
         ...prev,
         displayName: currentUser.displayName || '',
-        email: currentUser.email || ''
+        email: currentUser.email || '',
+        phone: currentUser.phone || '',
+        state: currentUser.state || '',
+        city: currentUser.city || '',
+        address: currentUser.address || '',
+        houseNumber: currentUser.houseNumber || '',
+        zipCode: currentUser.zipCode || ''
       }));
+
+
     }
   }, [currentUser]);
 
+  const formatPhone = (value) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 11) {
+      if (numbers.length === 11) {
+        return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+      } else if (numbers.length === 10) {
+        return numbers.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+      } else if (numbers.length >= 7) {
+        return numbers.replace(/(\d{2})(\d{4,5})/, '($1) $2');
+      } else if (numbers.length >= 3) {
+        return numbers.replace(/(\d{2})/, '($1)');
+      }
+      return numbers;
+    }
+    // Se exceder 11 dígitos, retorna apenas os primeiros 11 dígitos formatados
+    const limitedNumbers = numbers.substring(0, 11);
+    return limitedNumbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+  };
+
+  const formatZipCode = (value) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 8) {
+      return numbers.replace(/(\d{5})(\d{3})/, '$1-$2');
+    }
+    // Se exceder 8 dígitos, retorna apenas os primeiros 8 dígitos formatados
+    const limitedNumbers = numbers.substring(0, 8);
+    return limitedNumbers.replace(/(\d{5})(\d{3})/, '$1-$2');
+  };
+
   const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    let formattedValue = value;
+
+    if (name === 'phone') {
+      formattedValue = formatPhone(value);
+    } else if (name === 'zipCode') {
+      formattedValue = formatZipCode(value);
+    } else if (name === 'currentPassword' || name === 'newPassword' || name === 'confirmPassword') {
+      // Limitar senhas a 15 caracteres
+      formattedValue = value.substring(0, 15);
+    }
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: formattedValue
     });
   };
 
@@ -62,6 +125,18 @@ function Profile() {
       await updateProfile(currentUser, {
         displayName: formData.displayName.trim()
       });
+
+      // Atualizar dados adicionais no Firestore
+      const userRef = doc(db, 'users', currentUser.uid);
+      await updateDoc(userRef, {
+        name: formData.displayName.trim(),
+        phone: formData.phone,
+        state: formData.state,
+        city: formData.city,
+        address: formData.address,
+        houseNumber: formData.houseNumber,
+        zipCode: formData.zipCode
+      });
       
       showSuccess('Perfil atualizado com sucesso!');
       setIsEditing(false);
@@ -72,7 +147,7 @@ function Profile() {
 
   const validatePassword = (password) => {
     const minLength = 6;
-    const maxLength = 9;
+    const maxLength = 15;
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumbers = /\d/.test(password);
@@ -196,25 +271,137 @@ function Profile() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Email
-              </label>
-              <div className="relative">
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  disabled
-                  className="w-full p-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
-                  placeholder="seu@email.com"
-                />
-                <EnvelopeIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                         <div>
+               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                 Email
+               </label>
+               <div className="relative">
+                 <input
+                   type="email"
+                   name="email"
+                   value={formData.email}
+                   disabled
+                   className="w-full p-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
+                   placeholder="seu@email.com"
+                 />
+                 <EnvelopeIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+               </div>
+               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                 O email não pode ser alterado
+               </p>
+             </div>
+
+             <div>
+               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                 Telefone
+               </label>
+               <div className="relative">
+                 <input
+                   type="tel"
+                   name="phone"
+                   value={formData.phone}
+                   onChange={handleInputChange}
+                   disabled={!isEditing}
+                   className="w-full p-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-600"
+                   placeholder="(11) 99999-9999"
+                 />
+                 <PhoneIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+               </div>
+             </div>
+
+                           <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Estado
+                  </label>
+                                     <div className="relative">
+                     <input
+                       type="text"
+                       name="state"
+                       value={formData.state}
+                       onChange={handleInputChange}
+                       disabled={!isEditing}
+                       className="w-full p-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-600"
+                       placeholder="SP"
+                     />
+                     <MapPinIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Cidade
+                  </label>
+                                     <div className="relative">
+                     <input
+                       type="text"
+                       name="city"
+                       value={formData.city}
+                       onChange={handleInputChange}
+                       disabled={!isEditing}
+                       className="w-full p-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-600"
+                       placeholder="São Paulo"
+                     />
+                     <BuildingOfficeIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                   </div>
+                </div>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                O email não pode ser alterado
-              </p>
-            </div>
+
+                           <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Endereço
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      className="w-full p-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-600"
+                      placeholder="Rua das Flores"
+                    />
+                    <MapPinIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Número
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="houseNumber"
+                      value={formData.houseNumber}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      className="w-full p-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-600"
+                      placeholder="123"
+                    />
+                    <MapPinIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+              </div>
+
+             <div>
+               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                 CEP
+               </label>
+               <div className="relative">
+                 <input
+                   type="text"
+                   name="zipCode"
+                   value={formData.zipCode}
+                   onChange={handleInputChange}
+                   disabled={!isEditing}
+                   className="w-full p-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-600"
+                   placeholder="01234-567"
+                 />
+                 <MapPinIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+               </div>
+             </div>
 
             <div className="flex space-x-3">
               {!isEditing ? (
@@ -304,7 +491,7 @@ function Profile() {
                     value={formData.newPassword}
                     onChange={handleInputChange}
                     className="w-full p-2 pl-10 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                         placeholder="Entre 6-9 caracteres com maiúscula, minúscula, número e caractere especial"
+                                                                                   placeholder="Entre 6-15 caracteres com maiúscula, minúscula, número e caractere especial"
                   />
                   <LockClosedIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                   <button
@@ -324,7 +511,7 @@ function Profile() {
               <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 <p>A nova senha deve conter:</p>
                 <ul className="list-disc list-inside ml-2 space-y-1">
-                                     <li>Entre 6 e 9 caracteres</li>
+                                                                           <li>Entre 6 e 15 caracteres</li>
                   <li>Uma letra maiúscula (A-Z)</li>
                   <li>Uma letra minúscula (a-z)</li>
                   <li>Um número (0-9)</li>
@@ -384,6 +571,35 @@ function Profile() {
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Configurações */}
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+          Configurações
+        </h2>
+        
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                Confirmação de Logout
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Mostrar confirmação antes de sair do sistema
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                localStorage.removeItem('skipLogoutConfirm');
+                showSuccess('Configuração resetada! A confirmação de logout será exibida novamente.');
+              }}
+              className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Resetar
+            </button>
+          </div>
         </div>
       </div>
 

@@ -7,7 +7,11 @@ const useAlert = () => {
     title: '',
     message: '',
     onConfirm: null,
-    onCancel: null
+    onCancel: null,
+    showCheckbox: false,
+    checkboxLabel: '',
+    checkboxChecked: false,
+    onCheckboxChange: null
   });
 
   const showAlert = useCallback((config) => {
@@ -17,7 +21,11 @@ const useAlert = () => {
       title: config.title || '',
       message: config.message || '',
       onConfirm: config.onConfirm || null,
-      onCancel: config.onCancel || null
+      onCancel: config.onCancel || null,
+      showCheckbox: config.showCheckbox || false,
+      checkboxLabel: config.checkboxLabel || '',
+      checkboxChecked: config.checkboxChecked || false,
+      onCheckboxChange: config.onCheckboxChange || null
     });
   }, []);
 
@@ -97,6 +105,36 @@ const useAlert = () => {
     });
   }, [showAlert, hideAlert]);
 
+  const showLogoutConfirm = useCallback((onLogout) => {
+    // Verificar se o usuário já marcou para não mostrar mais
+    const skipLogoutConfirm = localStorage.getItem('skipLogoutConfirm');
+    if (skipLogoutConfirm === 'true') {
+      onLogout();
+      return;
+    }
+
+    showAlert({
+      type: 'warning',
+      title: 'Confirmar saída',
+      message: 'Tem certeza que deseja sair do sistema?',
+      showCheckbox: true,
+      checkboxLabel: 'Não mostrar esta mensagem novamente',
+      checkboxChecked: false,
+      onCheckboxChange: (checked) => {
+        setAlert(prev => ({ ...prev, checkboxChecked: checked }));
+      },
+      onConfirm: () => {
+        // Salvar preferência se marcado
+        if (alert.checkboxChecked) {
+          localStorage.setItem('skipLogoutConfirm', 'true');
+        }
+        onLogout();
+        hideAlert();
+      },
+      onCancel: hideAlert
+    });
+  }, [showAlert, hideAlert, alert.checkboxChecked]);
+
   return {
     alert,
     showAlert,
@@ -107,7 +145,8 @@ const useAlert = () => {
     showSuccess,
     showError,
     showInfo,
-    showWarning
+    showWarning,
+    showLogoutConfirm
   };
 };
 

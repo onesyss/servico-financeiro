@@ -58,7 +58,7 @@ function ResetPassword() {
 
   const validatePassword = (password) => {
     const minLength = 6;
-    const maxLength = 9;
+    const maxLength = 15;
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumbers = /\d/.test(password);
@@ -147,9 +147,17 @@ function ResetPassword() {
   };
 
   const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    let formattedValue = value;
+
+    if (name === 'password' || name === 'confirmPassword') {
+      // Limitar senhas a 15 caracteres
+      formattedValue = value.substring(0, 15);
+    }
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: formattedValue
     });
   };
 
@@ -223,7 +231,7 @@ function ResetPassword() {
                       value={formData.password}
                       onChange={handleInputChange}
                       className="appearance-none relative block w-full px-4 py-3 pl-12 pr-12 border border-gray-200 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white dark:focus:bg-gray-600 transition-all duration-200"
-                      placeholder="Entre 6-9 caracteres com maiúscula, minúscula, número e caractere especial"
+                      placeholder="Entre 6-15 caracteres com maiúscula, minúscula, número e caractere especial"
                     />
                     <LockClosedIcon className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
                     <button
@@ -243,7 +251,7 @@ function ResetPassword() {
                     <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
                       <li className="flex items-center">
                         <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></div>
-                        Entre 6 e 9 caracteres
+                        Entre 6 e 15 caracteres
                       </li>
                       <li className="flex items-center">
                         <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></div>
