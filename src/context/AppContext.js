@@ -35,16 +35,7 @@ export const AppProvider = ({ children }) => {
   // Estado para contas bancárias
   const [bankAccounts, setBankAccounts] = useState(() => {
     const savedBankAccounts = localStorage.getItem('controlfin_bankAccounts');
-    return savedBankAccounts ? JSON.parse(savedBankAccounts) : [
-      {
-        id: 1,
-        name: 'Conta Principal',
-        bank: 'Banco Principal',
-        balance: 0,
-        color: '#3B82F6',
-        isDefault: true
-      }
-    ];
+    return savedBankAccounts ? JSON.parse(savedBankAccounts) : [];
   });
 
   // Estado para lançamentos financeiros

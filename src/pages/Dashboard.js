@@ -80,6 +80,16 @@ function Dashboard() {
     return () => observer.disconnect();
   }, []);
 
+  // Função para formatar números com separadores de milhares
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  };
+
   // Função para atualizar dados do gráfico de categorias
   const updateChartData = () => {
     const categories = getExpensesByCategory(selectedMonth, selectedYear);
@@ -214,7 +224,7 @@ function Dashboard() {
               weight: '600'
             },
             callback: function(value) {
-              return 'R$ ' + value.toFixed(2);
+              return formatCurrency(value);
             },
           },
           grid: {
@@ -256,20 +266,20 @@ function Dashboard() {
       </div>
 
       {/* Cards de resumo */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-6">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg dark:shadow-gray-900/20 rounded-xl border border-gray-100 dark:border-gray-700 dashboard-card hover:shadow-xl dark:hover:shadow-gray-900/30 transition-all duration-300">
-          <div className="p-5">
+          <div className="p-3 sm:p-4">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900/40 rounded-lg p-3">
-                <WalletIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900/40 rounded-lg p-1.5 sm:p-2">
+                <WalletIcon className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
               </div>
-              <div className="ml-5 w-0 flex-1">
+              <div className="ml-2 sm:ml-3 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Saldo Disponível</dt>
                   <dd className="flex items-baseline">
-                    <div className={`text-2xl font-semibold ${accountBalance.currentBalance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600 dark:text-red-400'}`}>
-                      R$ {accountBalance.currentBalance.toFixed(2)}
-                    </div>
+                                    <div className={`text-base font-semibold ${accountBalance.currentBalance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600 dark:text-red-400'}`}>
+                  {formatCurrency(accountBalance.currentBalance)}
+                </div>
                   </dd>
                 </dl>
               </div>
@@ -278,18 +288,18 @@ function Dashboard() {
         </div>
 
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg dark:shadow-gray-900/20 rounded-xl border border-gray-100 dark:border-gray-700 dashboard-card hover:shadow-xl dark:hover:shadow-gray-900/30 transition-all duration-300">
-          <div className="p-5">
+          <div className="p-3 sm:p-4">
             <div className="flex items-center">
               <div className="flex-shrink-0 bg-purple-100 dark:bg-purple-900/40 rounded-lg p-3">
-                <BuildingLibraryIcon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                <BuildingLibraryIcon className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-400" />
               </div>
-              <div className="ml-5 w-0 flex-1">
+              <div className="ml-2 sm:ml-3 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Bancos</dt>
                   <dd className="flex items-baseline">
-                    <div className={`text-2xl font-semibold ${totalBankBalance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600 dark:text-red-400'}`}>
-                      R$ {totalBankBalance.toFixed(2)}
-                    </div>
+                                    <div className={`text-base font-semibold ${totalBankBalance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600 dark:text-red-400'}`}>
+                  {formatCurrency(totalBankBalance)}
+                </div>
                   </dd>
                 </dl>
               </div>
@@ -298,16 +308,16 @@ function Dashboard() {
         </div>
 
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg dark:shadow-gray-900/20 rounded-xl border border-gray-100 dark:border-gray-700 dashboard-card hover:shadow-xl dark:hover:shadow-gray-900/30 transition-all duration-300">
-          <div className="p-5">
+          <div className="p-3 sm:p-4">
             <div className="flex items-center">
               <div className="flex-shrink-0 bg-yellow-100 dark:bg-yellow-900/40 rounded-lg p-3">
-                <BanknotesIcon className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                <BanknotesIcon className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600 dark:text-yellow-400" />
               </div>
-              <div className="ml-5 w-0 flex-1">
+              <div className="ml-2 sm:ml-3 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Contas Fixas</dt>
                   <dd className="flex items-baseline">
-                    <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">R$ {totalFixedBills.toFixed(2)}</div>
+                    <div className="text-base font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(totalFixedBills)}</div>
                   </dd>
                 </dl>
               </div>
@@ -316,16 +326,16 @@ function Dashboard() {
         </div>
 
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg dark:shadow-gray-900/20 rounded-xl border border-gray-100 dark:border-gray-700 dashboard-card hover:shadow-xl dark:hover:shadow-gray-900/30 transition-all duration-300">
-          <div className="p-5">
+          <div className="p-3 sm:p-4">
             <div className="flex items-center">
               <div className="flex-shrink-0 bg-red-100 dark:bg-red-900/40 rounded-lg p-3">
-                <CreditCardIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
+                <CreditCardIcon className="h-4 w-4 sm:h-5 sm:w-5 text-red-600 dark:text-red-400" />
               </div>
-              <div className="ml-5 w-0 flex-1">
+              <div className="ml-2 sm:ml-3 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total em Dívidas</dt>
                   <dd className="flex items-baseline">
-                    <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">R$ {totalDebts.toFixed(2)}</div>
+                    <div className="text-base font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(totalDebts)}</div>
                   </dd>
                 </dl>
               </div>
@@ -334,16 +344,16 @@ function Dashboard() {
         </div>
 
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg dark:shadow-gray-900/20 rounded-xl border border-gray-100 dark:border-gray-700 dashboard-card hover:shadow-xl dark:hover:shadow-gray-900/30 transition-all duration-300">
-          <div className="p-5">
+          <div className="p-3 sm:p-4">
             <div className="flex items-center">
               <div className="flex-shrink-0 bg-primary-100 dark:bg-primary-900/40 rounded-lg p-3">
-                <CalendarIcon className="h-6 w-6 text-primary-600 dark:text-primary-400" />
+                <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5 text-primary-600 dark:text-primary-400" />
               </div>
-              <div className="ml-5 w-0 flex-1">
+              <div className="ml-2 sm:ml-3 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Gastos do Mês</dt>
                   <dd className="flex items-baseline">
-                    <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">R$ {totalExpensesMonth.toFixed(2)}</div>
+                    <div className="text-base font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(totalExpensesMonth)}</div>
                   </dd>
                 </dl>
               </div>
@@ -352,16 +362,16 @@ function Dashboard() {
         </div>
 
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg dark:shadow-gray-900/20 rounded-xl border border-gray-100 dark:border-gray-700 dashboard-card hover:shadow-xl dark:hover:shadow-gray-900/30 transition-all duration-300">
-          <div className="p-5">
+          <div className="p-3 sm:p-4">
             <div className="flex items-center">
               <div className="flex-shrink-0 bg-green-100 dark:bg-green-900/40 rounded-lg p-3">
-                <ArrowTrendingUpIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
+                <ArrowTrendingUpIcon className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 dark:text-green-400" />
               </div>
-              <div className="ml-5 w-0 flex-1">
+              <div className="ml-2 sm:ml-3 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Economizado</dt>
                   <dd className="flex items-baseline">
-                    <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">R$ {totalSavings.toFixed(2)}</div>
+                    <div className="text-base font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(totalSavings)}</div>
                   </dd>
                 </dl>
               </div>
@@ -463,7 +473,7 @@ function Dashboard() {
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{account.bank}</p>
                 <p className={`text-lg font-bold ${account.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  R$ {account.balance.toFixed(2)}
+                  {formatCurrency(account.balance)}
                 </p>
               </div>
             ))}

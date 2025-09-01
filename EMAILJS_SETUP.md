@@ -83,8 +83,8 @@ emailjs.init("SEU_USER_ID_AQUI");
 
 // Linha 75-79 - emailjs.send
 await emailjs.send(
-  'SEU_SERVICE_ID_AQUI', // Service ID do Gmail
-  'SEU_TEMPLATE_ID_AQUI', // Template ID criado
+  'service_cvq7rm8', // Service ID do Gmail
+  'template_llz0wxs', // Template ID criado
   templateParams,
   'SEU_USER_ID_AQUI' // User ID (Public Key)
 );

@@ -90,12 +90,12 @@ function Calendar() {
     return date < today;
   };
 
-  // Marcar conta como paga
-  const markAsPaid = (bill) => {
+  // Alternar status de pagamento da conta
+  const togglePaidStatus = (bill) => {
     if (bill.type === 'fixed') {
-      updateFixedBill(bill.id, { ...bill, isPaid: true });
+      updateFixedBill(bill.id, { ...bill, isPaid: !bill.isPaid });
     } else {
-      updateDebt(bill.id, { ...bill, isPaid: true });
+      updateDebt(bill.id, { ...bill, isPaid: !bill.isPaid });
     }
   };
 
@@ -392,14 +392,16 @@ function Calendar() {
                                                                            <div className="flex items-center space-x-3">
                       <span className="font-semibold text-gray-900 dark:text-gray-100">R$ {bill.amount || 0}</span>
                       <div className="flex items-center space-x-2">
-                        {!bill.isPaid && (
-                          <button
-                            onClick={() => markAsPaid(bill)}
-                            className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
-                          >
-                            Marcar como Paga
-                          </button>
-                        )}
+                        <button
+                          onClick={() => togglePaidStatus(bill)}
+                          className={`px-3 py-1 text-white text-sm rounded hover:opacity-80 ${
+                            bill.isPaid 
+                              ? 'bg-red-600 hover:bg-red-700' 
+                              : 'bg-green-600 hover:bg-green-700'
+                          }`}
+                        >
+                          {bill.isPaid ? 'Marcar como Pendente' : 'Marcar como Paga'}
+                        </button>
                         <button
                           onClick={() => handleEditBill(bill)}
                           className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"

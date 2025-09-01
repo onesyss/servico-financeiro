@@ -49,6 +49,7 @@ function AccountBalance() {
   const [newBankAccount, setNewBankAccount] = useState({
     name: '',
     bank: '',
+    institution: '',
     balance: '',
     color: '#3B82F6'
   });
@@ -160,10 +161,10 @@ function AccountBalance() {
     try {
       addBankAccount(newBankAccount);
       setShowBankAccountModal(false);
-      setNewBankAccount({ name: '', bank: '', balance: '', color: '#3B82F6' });
-      showSuccess('Conta bancária adicionada com sucesso!');
+      setNewBankAccount({ name: '', bank: '', institution: '', balance: '', color: '#3B82F6' });
+      showSuccess('Conta adicionada com sucesso!');
     } catch (error) {
-      showError('Erro ao adicionar conta bancária. Tente novamente.');
+      showError('Erro ao adicionar conta. Tente novamente.');
     }
   };
 
@@ -189,16 +190,21 @@ function AccountBalance() {
     const account = bankAccounts.find(a => a.id === id);
     if (account) {
       if (bankAccounts.length === 1) {
-        showError('Não é possível excluir a única conta bancária.');
+        showError('Não é possível excluir a única conta. Adicione outra conta antes de excluir esta.');
         return;
       }
       
-      showDeleteConfirm(`${account.name} (${account.bank})`, () => {
+      const isDefaultAccount = account.isDefault;
+      const message = isDefaultAccount 
+        ? `Excluir a conta padrão "${account.name}"? A próxima conta será definida como padrão automaticamente.`
+        : `Excluir "${account.name} (${account.bank})"?`;
+      
+      showDeleteConfirm(message, () => {
         try {
           deleteBankAccount(id);
-          showSuccess('Conta bancária excluída com sucesso!');
+          showSuccess('Conta excluída com sucesso!');
         } catch (error) {
-          showError('Erro ao excluir conta bancária. Tente novamente.');
+          showError('Erro ao excluir conta. Tente novamente.');
         }
       });
     }
@@ -256,10 +262,29 @@ function AccountBalance() {
   const availableBalance = accountBalance.currentBalance;
   const totalBankBalance = getTotalBankBalance();
 
+  // Função para formatar números com separadores de milhares
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  };
+
   // Função para obter nome da conta bancária
   const getBankAccountName = (id) => {
     const account = bankAccounts.find(a => a.id === id);
-    return account ? `${account.name} (${account.bank})` : 'Conta não encontrada';
+    if (!account) return 'Conta não encontrada';
+    
+    let displayName = account.name;
+    if (account.institution) {
+      displayName += ` (${account.institution})`;
+    } else if (account.bank) {
+      displayName += ` (${account.bank})`;
+    }
+    
+    return displayName;
   };
 
   return (
@@ -269,8 +294,8 @@ function AccountBalance() {
         <div className="flex items-center space-x-4">
           <BanknotesIcon className="w-6 h-6 text-primary-600 dark:text-primary-400" />
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Saldo em Conta</h1>
-            <p className="text-gray-600 dark:text-gray-400">Controle suas entradas e saídas</p>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Contas e Saldos</h1>
+            <p className="text-gray-600 dark:text-gray-400">Gerencie suas contas bancárias, cartões e carteiras</p>
           </div>
         </div>
         <div className="flex space-x-2">
@@ -279,7 +304,7 @@ function AccountBalance() {
             className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
           >
             <BuildingLibraryIcon className="w-5 h-5 mr-2" />
-            Gerenciar Contas
+            Adicionar Conta
           </button>
           <button
             onClick={() => {
@@ -302,8 +327,69 @@ function AccountBalance() {
       </div>
 
       {/* Resumo das contas bancárias */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {bankAccounts.map((account) => (
+      {bankAccounts.length === 0 ? (
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+          <div className="text-center mb-6">
+            <BuildingLibraryIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+              Comece adicionando uma conta
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Adicione uma carteira, conta bancária ou cartão para começar a controlar seus gastos.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+              <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Carteira</h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                Para controle de dinheiro físico e gastos do dia a dia.
+              </p>
+              <button
+                onClick={() => {
+                  setNewBankAccount({
+                    name: 'Carteira',
+                    bank: 'Carteira',
+                    institution: '',
+                    balance: '0',
+                    color: '#10B981'
+                  });
+                  setShowBankAccountModal(true);
+                }}
+                className="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              >
+                <PlusIcon className="w-4 h-4 mr-2" />
+                Adicionar Carteira
+              </button>
+            </div>
+            
+            <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+              <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Conta Bancária</h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                Para contas em bancos, cartões de crédito ou débito.
+              </p>
+              <button
+                onClick={() => {
+                  setNewBankAccount({
+                    name: '',
+                    bank: '',
+                    institution: '',
+                    balance: '0',
+                    color: '#3B82F6'
+                  });
+                  setShowBankAccountModal(true);
+                }}
+                className="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                <PlusIcon className="w-4 h-4 mr-2" />
+                Adicionar Conta
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {bankAccounts.map((account) => (
           <div 
             key={account.id} 
             className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
@@ -322,29 +408,30 @@ function AccountBalance() {
                   <StarIcon className="w-4 h-4 text-yellow-500" title="Conta padrão" />
                 )}
               </div>
-              <div className="flex space-x-1">
-                <button
-                  onClick={() => handleStartEditBankAccount(account)}
-                  className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
-                  title="Editar"
-                >
-                  <PencilIcon className="w-4 h-4" />
-                </button>
-                {!account.isDefault && (
-                  <button
-                    onClick={() => handleDeleteBankAccount(account.id)}
-                    className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                    title="Excluir"
-                  >
-                    <TrashIcon className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
+                             <div className="flex space-x-1">
+                 <button
+                   onClick={() => handleStartEditBankAccount(account)}
+                   className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
+                   title="Editar"
+                 >
+                   <PencilIcon className="w-4 h-4" />
+                 </button>
+                 <button
+                   onClick={() => handleDeleteBankAccount(account.id)}
+                   className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                   title="Excluir"
+                 >
+                   <TrashIcon className="w-4 h-4" />
+                 </button>
+               </div>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{account.bank}</p>
-            <p className={`text-lg font-bold ${account.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-              R$ {account.balance.toFixed(2)}
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              {account.bank}
+              {account.institution && ` • ${account.institution}`}
             </p>
+                         <p className={`text-lg font-bold ${account.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+               {formatCurrency(account.balance)}
+             </p>
             {!account.isDefault && (
               <button
                 onClick={() => handleSetDefaultAccount(account.id)}
@@ -355,7 +442,8 @@ function AccountBalance() {
             )}
           </div>
         ))}
-      </div>
+        </div>
+      )}
 
       {/* Resumo do saldo geral */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -363,8 +451,8 @@ function AccountBalance() {
           <div className="flex items-center">
             <ArrowUpIcon className="w-5 h-5 text-green-600 dark:text-green-400 mr-2" />
             <div>
-              <h3 className="font-semibold text-green-800 dark:text-green-200">Total de Entradas</h3>
-              <p className="text-green-600 dark:text-green-400">R$ {totalIncome.toFixed(2)}</p>
+                             <h3 className="font-semibold text-green-800 dark:text-green-200">Total de Entradas</h3>
+               <p className="text-green-600 dark:text-green-400">{formatCurrency(totalIncome)}</p>
             </div>
           </div>
         </div>
@@ -373,8 +461,8 @@ function AccountBalance() {
           <div className="flex items-center">
             <ArrowDownIcon className="w-5 h-5 text-red-600 dark:text-red-400 mr-2" />
             <div>
-              <h3 className="font-semibold text-red-800 dark:text-red-200">Total de Saídas</h3>
-              <p className="text-red-600 dark:text-red-400">R$ {totalExpenses.toFixed(2)}</p>
+                             <h3 className="font-semibold text-red-800 dark:text-red-200">Total de Saídas</h3>
+               <p className="text-red-600 dark:text-red-400">{formatCurrency(totalExpenses)}</p>
             </div>
           </div>
         </div>
@@ -384,10 +472,10 @@ function AccountBalance() {
             <div className="flex items-center">
               <BanknotesIcon className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" />
               <div>
-                <h3 className="font-semibold text-blue-800 dark:text-blue-200">Saldo Disponível</h3>
-                <p className={`text-lg font-bold ${availableBalance >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
-                  R$ {availableBalance.toFixed(2)}
-                </p>
+                                 <h3 className="font-semibold text-blue-800 dark:text-blue-200">Saldo Disponível</h3>
+                 <p className={`text-lg font-bold ${availableBalance >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
+                   {formatCurrency(availableBalance)}
+                 </p>
               </div>
             </div>
             {availableBalance !== 0 && (
@@ -428,10 +516,10 @@ function AccountBalance() {
           <div className="flex items-center">
             <BuildingLibraryIcon className="w-5 h-5 text-purple-600 dark:text-purple-400 mr-2" />
             <div>
-              <h3 className="font-semibold text-purple-800 dark:text-purple-200">Total Bancos</h3>
-              <p className={`text-lg font-bold ${totalBankBalance >= 0 ? 'text-purple-600 dark:text-purple-400' : 'text-red-600 dark:text-red-400'}`}>
-                R$ {totalBankBalance.toFixed(2)}
-              </p>
+                             <h3 className="font-semibold text-purple-800 dark:text-purple-200">Total Bancos</h3>
+               <p className={`text-lg font-bold ${totalBankBalance >= 0 ? 'text-purple-600 dark:text-purple-400' : 'text-red-600 dark:text-red-400'}`}>
+                 {formatCurrency(totalBankBalance)}
+               </p>
             </div>
           </div>
         </div>
@@ -478,11 +566,11 @@ function AccountBalance() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {transaction.bankAccountId ? getBankAccountName(transaction.bankAccountId) : 'N/A'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span className={`font-semibold ${transaction.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                          {transaction.amount >= 0 ? '+' : ''}R$ {transaction.amount.toFixed(2)}
-                        </span>
-                      </td>
+                                             <td className="px-6 py-4 whitespace-nowrap text-sm">
+                         <span className={`font-semibold ${transaction.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                           {transaction.amount >= 0 ? '+' : ''}{formatCurrency(transaction.amount)}
+                         </span>
+                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center space-x-2">
                           <button
@@ -528,18 +616,18 @@ function AccountBalance() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Conta Bancária *
                 </label>
-                <select
-                  value={newTransaction.bankAccountId || ''}
-                  onChange={(e) => setNewTransaction({...newTransaction, bankAccountId: e.target.value ? parseInt(e.target.value) : null})}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                >
-                  <option value="">Selecione uma conta</option>
-                  {bankAccounts.map(account => (
-                    <option key={account.id} value={account.id}>
-                      {account.name} ({account.bank}) - R$ {account.balance.toFixed(2)}
-                    </option>
-                  ))}
-                </select>
+                                 <select
+                   value={newTransaction.bankAccountId || ''}
+                   onChange={(e) => setNewTransaction({...newTransaction, bankAccountId: e.target.value ? parseInt(e.target.value) : null})}
+                   className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                 >
+                   <option value="">Selecione uma conta</option>
+                   {bankAccounts.map(account => (
+                     <option key={account.id} value={account.id}>
+                       {account.name} ({account.bank}) - {formatCurrency(account.balance)}
+                     </option>
+                   ))}
+                 </select>
               </div>
 
               <div>
@@ -636,18 +724,18 @@ function AccountBalance() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Conta Bancária *
                 </label>
-                <select
-                  value={editingTransaction.bankAccountId || ''}
-                  onChange={(e) => setEditingTransaction({...editingTransaction, bankAccountId: e.target.value ? parseInt(e.target.value) : null})}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                >
-                  <option value="">Selecione uma conta</option>
-                  {bankAccounts.map(account => (
-                    <option key={account.id} value={account.id}>
-                      {account.name} ({account.bank}) - R$ {account.balance.toFixed(2)}
-                    </option>
-                  ))}
-                </select>
+                                 <select
+                   value={editingTransaction.bankAccountId || ''}
+                   onChange={(e) => setEditingTransaction({...editingTransaction, bankAccountId: e.target.value ? parseInt(e.target.value) : null})}
+                   className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                 >
+                   <option value="">Selecione uma conta</option>
+                   {bankAccounts.map(account => (
+                     <option key={account.id} value={account.id}>
+                       {account.name} ({account.bank}) - {formatCurrency(account.balance)}
+                     </option>
+                   ))}
+                 </select>
               </div>
 
               <div>
@@ -731,7 +819,7 @@ function AccountBalance() {
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {editingBankAccount ? 'Editar Conta Bancária' : 'Nova Conta Bancária'}
+                {editingBankAccount ? 'Editar Conta' : 'Nova Conta'}
               </h3>
               <button
                 onClick={() => {
@@ -760,16 +848,15 @@ function AccountBalance() {
                     }
                   }}
                   className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  placeholder="Ex: Conta Corrente"
+                  placeholder="Ex: Conta Principal, Nubank, Carteira"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Banco *
+                  Tipo *
                 </label>
-                <input
-                  type="text"
+                <select
                   value={editingBankAccount ? editingBankAccount.bank : newBankAccount.bank}
                   onChange={(e) => {
                     if (editingBankAccount) {
@@ -779,7 +866,34 @@ function AccountBalance() {
                     }
                   }}
                   className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  placeholder="Ex: Banco do Brasil"
+                >
+                  <option value="">Selecione o tipo</option>
+                  <option value="Conta Bancária">Conta Bancária</option>
+                  <option value="Cartão de Crédito">Cartão de Crédito</option>
+                  <option value="Cartão de Débito">Cartão de Débito</option>
+                  <option value="Carteira">Carteira</option>
+                  <option value="Poupança">Poupança</option>
+                  <option value="Investimento">Investimento</option>
+                  <option value="Outro">Outro</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Instituição
+                </label>
+                <input
+                  type="text"
+                  value={editingBankAccount ? editingBankAccount.institution : (newBankAccount.institution || '')}
+                  onChange={(e) => {
+                    if (editingBankAccount) {
+                      setEditingBankAccount({...editingBankAccount, institution: e.target.value});
+                    } else {
+                      setNewBankAccount({...newBankAccount, institution: e.target.value});
+                    }
+                  }}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  placeholder="Ex: Nubank, Itaú, Banco do Brasil"
                 />
               </div>
 
@@ -888,9 +1002,9 @@ function AccountBalance() {
               </div>
               {isEditingBalance && (
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                  <p className="text-sm text-blue-800 dark:text-blue-200">
-                    <strong>Atenção:</strong> Esta ação irá substituir o saldo atual de R$ {availableBalance.toFixed(2)} pelo novo valor.
-                  </p>
+                                     <p className="text-sm text-blue-800 dark:text-blue-200">
+                     <strong>Atenção:</strong> Esta ação irá substituir o saldo atual de {formatCurrency(availableBalance)} pelo novo valor.
+                   </p>
                 </div>
               )}
             </div>

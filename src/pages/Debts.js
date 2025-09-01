@@ -184,6 +184,16 @@ function Debts() {
     }
   };
 
+  // Função para formatar números com separadores de milhares
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  };
+
   // Calcular total das dívidas
   const totalDebt = debts.reduce((total, debt) => total + parseFloat(debt.remainingAmount), 0);
 
@@ -204,10 +214,10 @@ function Debts() {
         <div className="flex items-center space-x-4">
           <div className="text-right">
             <p className="text-lg font-semibold text-red-600 dark:text-red-400">
-              Total: R$ {totalDebt.toFixed(2)}
+              Total: {formatCurrency(totalDebt)}
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Pagamento mensal estimado: R$ {totalMonthlyPayment.toFixed(2)}
+              Pagamento mensal estimado: {formatCurrency(totalMonthlyPayment)}
             </p>
           </div>
           <button
@@ -452,7 +462,7 @@ function Debts() {
                       {debt.description}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      R$ {parseFloat(debt.remainingAmount).toFixed(2)}
+                      {formatCurrency(parseFloat(debt.remainingAmount))}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {debt.remainingInstallments} / {debt.installments}
@@ -472,7 +482,7 @@ function Debts() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      R$ {calculateMonthlyPayment(debt).toFixed(2)}
+                      {formatCurrency(calculateMonthlyPayment(debt))}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
@@ -510,11 +520,11 @@ function Debts() {
           <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
             <div>
               <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Total em Dívidas</dt>
-              <dd className="mt-1 text-2xl font-semibold text-red-600 dark:text-red-400">R$ {totalDebt.toFixed(2)}</dd>
+              <dd className="mt-1 text-2xl font-semibold text-red-600 dark:text-red-400">{formatCurrency(totalDebt)}</dd>
             </div>
             <div>
               <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Pagamento Mensal</dt>
-              <dd className="mt-1 text-2xl font-semibold text-primary-600 dark:text-primary-400">R$ {totalMonthlyPayment.toFixed(2)}</dd>
+              <dd className="mt-1 text-2xl font-semibold text-primary-600 dark:text-primary-400">{formatCurrency(totalMonthlyPayment)}</dd>
             </div>
             <div>
               <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Dívidas de Alta Prioridade</dt>
@@ -685,7 +695,7 @@ function Debts() {
               {recurringData.totalAmount && recurringData.installments && (
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
                   <p className="text-sm text-blue-800 dark:text-blue-200">
-                    <strong>Preview:</strong> Valor por parcela: R$ {(parseFloat(recurringData.totalAmount || 0) / parseInt(recurringData.installments || 1)).toFixed(2)}
+                    <strong>Preview:</strong> Valor por parcela: {formatCurrency(parseFloat(recurringData.totalAmount || 0) / parseInt(recurringData.installments || 1))}
                   </p>
                 </div>
               )}
