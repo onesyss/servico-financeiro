@@ -5,6 +5,8 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearSca
 import { CalendarIcon, CreditCardIcon, BanknotesIcon, ArrowTrendingUpIcon, WalletIcon, BuildingLibraryIcon } from '@heroicons/react/24/outline';
 import SyncStatus from '../components/SyncStatus';
 import SyncDebug from '../components/SyncDebug';
+import SyncTest from '../components/SyncTest';
+import QuotaStatus from '../components/QuotaStatus';
 
 // Registrar componentes do Chart.js
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
@@ -311,8 +313,14 @@ function Dashboard() {
         </div>
       </div>
 
+      {/* Status da Cota do Firebase */}
+      <QuotaStatus syncError={syncError} />
+
       {/* Debug de Sincronização - Remover depois */}
       <SyncDebug />
+      
+      {/* Teste de Sincronização - Remover depois */}
+      <SyncTest />
 
       {/* Cards de resumo */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">

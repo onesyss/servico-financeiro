@@ -177,57 +177,59 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // Função para salvar dados no Firestore com retry
+  // Função para salvar dados no Firestore com retry e verificação de cota
   const saveUserData = async (dataType, data, retryCount = 0) => {
     if (!currentUser) {
-      console.log('Usuário não logado, não salvando no Firestore');
+      console.log('❌ Usuário não logado, não salvando no Firestore');
       return;
     }
     
     try {
-      console.log(`Salvando ${dataType} no Firestore (tentativa ${retryCount + 1}):`, data);
+      console.log(`💾 Salvando ${dataType} no Firestore (tentativa ${retryCount + 1}):`, data);
       setSyncError(null);
       
       const userRef = doc(db, 'users', currentUser.uid);
       
-      // Verificar se o documento existe
-      const userDoc = await getDoc(userRef);
+      // Sempre usar setDoc para garantir que os dados sejam salvos
+      await setDoc(userRef, {
+        name: currentUser?.displayName || '',
+        email: currentUser?.email || '',
+        [dataType]: data,
+        lastUpdated: new Date(),
+        lastSyncAttempt: new Date(),
+        // Manter outros dados existentes
+        expenses: dataType === 'expenses' ? data : expenses,
+        debts: dataType === 'debts' ? data : debts,
+        fixedBills: dataType === 'fixedBills' ? data : fixedBills,
+        savingsGoals: dataType === 'savingsGoals' ? data : savingsGoals,
+        bankAccounts: dataType === 'bankAccounts' ? data : bankAccounts,
+        financialEntries: dataType === 'financialEntries' ? data : financialEntries,
+        accountBalance: dataType === 'accountBalance' ? data : accountBalance
+      }, { merge: true });
       
-      if (userDoc.exists()) {
-        // Atualizar documento existente
-        await updateDoc(userRef, {
-          [dataType]: data,
-          lastUpdated: new Date(),
-          lastSyncAttempt: new Date()
-        });
-        console.log(`${dataType} atualizado com sucesso no Firestore`);
-      } else {
-        // Criar documento se não existir
-        await setDoc(userRef, {
-          name: currentUser?.displayName || '',
-          email: currentUser?.email || '',
-          [dataType]: data,
-          createdAt: new Date(),
-          lastUpdated: new Date(),
-          lastSyncAttempt: new Date()
-        });
-        console.log(`Documento criado e ${dataType} salvo com sucesso no Firestore`);
-      }
-      
+      console.log(`✅ ${dataType} salvo com sucesso no Firestore`);
       setLastSync(new Date());
       setSyncRetryCount(0);
     } catch (error) {
-      console.error(`Erro ao salvar ${dataType} no Firestore:`, error);
+      console.error(`❌ Erro ao salvar ${dataType} no Firestore:`, error);
+      
+      // Verificar se é erro de cota
+      if (error.code === 'resource-exhausted' || error.message.includes('quota') || error.message.includes('cota')) {
+        console.log('🚨 Cota do Firebase excedida! Usando apenas localStorage.');
+        setSyncError('Cota do Firebase excedida. Dados salvos localmente.');
+        return; // Não tentar novamente se for erro de cota
+      }
+      
       setSyncError(error.message);
       
-      // Tentar novamente até 3 vezes
+      // Tentar novamente até 3 vezes apenas se não for erro de cota
       if (retryCount < 3) {
-        console.log(`Tentando novamente em 2 segundos... (${retryCount + 1}/3)`);
+        console.log(`🔄 Tentando novamente em 2 segundos... (${retryCount + 1}/3)`);
         setTimeout(() => {
           saveUserData(dataType, data, retryCount + 1);
         }, 2000);
       } else {
-        console.error(`Falha ao salvar ${dataType} após 3 tentativas`);
+        console.error(`❌ Falha ao salvar ${dataType} após 3 tentativas`);
         setSyncRetryCount(retryCount + 1);
       }
     }
@@ -236,6 +238,7 @@ export const AppProvider = ({ children }) => {
   // Carregar dados quando o usuário fizer login
   useEffect(() => {
     if (currentUser) {
+      console.log('Usuário logado, iniciando sincronização:', currentUser.email);
       loadUserData(currentUser.uid);
       
       // Configurar listener em tempo real para sincronização automática
@@ -243,111 +246,139 @@ export const AppProvider = ({ children }) => {
       const unsubscribe = onSnapshot(userRef, (doc) => {
         if (doc.exists()) {
           const userData = doc.data();
-          console.log('Dados atualizados em tempo real:', userData);
+          console.log('🔄 Dados atualizados em tempo real do Firestore:', userData);
           setSyncError(null);
           
-          // Função para comparar e atualizar dados
-          const updateIfDifferent = (currentData, newData, key) => {
-            if (newData && Array.isArray(newData)) {
-              const currentStr = JSON.stringify(currentData);
-              const newStr = JSON.stringify(newData);
-              
-              if (currentStr !== newStr) {
-                console.log(`Atualizando ${key}:`, newData.length, 'itens');
-                localStorage.setItem(`controlfin_${key}`, newStr);
-                return newData;
-              }
-            }
-            return currentData;
-          };
+          // Forçar atualização de todos os dados do Firestore
+          if (userData.expenses && Array.isArray(userData.expenses)) {
+            console.log('📊 Atualizando expenses:', userData.expenses.length, 'itens');
+            setExpenses(userData.expenses);
+            localStorage.setItem('controlfin_expenses', JSON.stringify(userData.expenses));
+          }
           
-          // Atualizar todos os estados
-          setExpenses(prev => updateIfDifferent(prev, userData.expenses, 'expenses'));
-          setDebts(prev => updateIfDifferent(prev, userData.debts, 'debts'));
-          setFixedBills(prev => updateIfDifferent(prev, userData.fixedBills, 'fixedBills'));
-          setSavingsGoals(prev => updateIfDifferent(prev, userData.savingsGoals, 'savingsGoals'));
-          setBankAccounts(prev => updateIfDifferent(prev, userData.bankAccounts, 'bankAccounts'));
-          setFinancialEntries(prev => updateIfDifferent(prev, userData.financialEntries, 'financialEntries'));
+          if (userData.debts && Array.isArray(userData.debts)) {
+            console.log('💳 Atualizando debts:', userData.debts.length, 'itens');
+            setDebts(userData.debts);
+            localStorage.setItem('controlfin_debts', JSON.stringify(userData.debts));
+          }
           
-          // Atualizar accountBalance
+          if (userData.fixedBills && Array.isArray(userData.fixedBills)) {
+            console.log('📅 Atualizando fixedBills:', userData.fixedBills.length, 'itens');
+            setFixedBills(userData.fixedBills);
+            localStorage.setItem('controlfin_fixedBills', JSON.stringify(userData.fixedBills));
+          }
+          
+          if (userData.savingsGoals && Array.isArray(userData.savingsGoals)) {
+            console.log('💰 Atualizando savingsGoals:', userData.savingsGoals.length, 'itens');
+            setSavingsGoals(userData.savingsGoals);
+            localStorage.setItem('controlfin_savingsGoals', JSON.stringify(userData.savingsGoals));
+          }
+          
+          if (userData.bankAccounts && Array.isArray(userData.bankAccounts)) {
+            console.log('🏦 Atualizando bankAccounts:', userData.bankAccounts.length, 'itens');
+            setBankAccounts(userData.bankAccounts);
+            localStorage.setItem('controlfin_bankAccounts', JSON.stringify(userData.bankAccounts));
+          }
+          
+          if (userData.financialEntries && Array.isArray(userData.financialEntries)) {
+            console.log('📝 Atualizando financialEntries:', userData.financialEntries.length, 'itens');
+            setFinancialEntries(userData.financialEntries);
+            localStorage.setItem('controlfin_financialEntries', JSON.stringify(userData.financialEntries));
+          }
+          
           if (userData.accountBalance) {
-            setAccountBalance(prev => {
-              const currentStr = JSON.stringify(prev);
-              const newStr = JSON.stringify(userData.accountBalance);
-              
-              if (currentStr !== newStr) {
-                console.log('Atualizando accountBalance');
-                localStorage.setItem('controlfin_accountBalance', newStr);
-                return userData.accountBalance;
-              }
-              return prev;
-            });
+            console.log('💵 Atualizando accountBalance');
+            setAccountBalance(userData.accountBalance);
+            localStorage.setItem('controlfin_accountBalance', JSON.stringify(userData.accountBalance));
           }
           
           setLastSync(new Date());
-          console.log('Sincronização em tempo real concluída');
+          console.log('✅ Sincronização em tempo real concluída com sucesso');
         } else {
-          console.log('Documento não encontrado no listener em tempo real');
+          console.log('⚠️ Documento não encontrado no listener em tempo real');
         }
       }, (error) => {
-        console.error('Erro no listener em tempo real:', error);
+        console.error('❌ Erro no listener em tempo real:', error);
         setSyncError(error.message);
       });
       
       // Cleanup do listener quando o componente for desmontado
       return () => {
+        console.log('🔄 Desconectando listener em tempo real');
         unsubscribe();
       };
     }
   }, [currentUser]);
 
-  // Salvar dados no localStorage e Firestore quando o estado mudar
+  // Salvar dados no localStorage e Firestore quando o estado mudar (com debounce)
   useEffect(() => {
     localStorage.setItem('controlfin_expenses', JSON.stringify(expenses));
     if (currentUser) {
-      saveUserData('expenses', expenses);
+      // Debounce para evitar muitas escritas
+      const timeoutId = setTimeout(() => {
+        saveUserData('expenses', expenses);
+      }, 2000);
+      return () => clearTimeout(timeoutId);
     }
   }, [expenses, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('controlfin_debts', JSON.stringify(debts));
     if (currentUser) {
-      saveUserData('debts', debts);
+      const timeoutId = setTimeout(() => {
+        saveUserData('debts', debts);
+      }, 2000);
+      return () => clearTimeout(timeoutId);
     }
   }, [debts, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('controlfin_fixedBills', JSON.stringify(fixedBills));
     if (currentUser) {
-      saveUserData('fixedBills', fixedBills);
+      const timeoutId = setTimeout(() => {
+        saveUserData('fixedBills', fixedBills);
+      }, 2000);
+      return () => clearTimeout(timeoutId);
     }
   }, [fixedBills, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('controlfin_savingsGoals', JSON.stringify(savingsGoals));
     if (currentUser) {
-      saveUserData('savingsGoals', savingsGoals);
+      const timeoutId = setTimeout(() => {
+        saveUserData('savingsGoals', savingsGoals);
+      }, 2000);
+      return () => clearTimeout(timeoutId);
     }
   }, [savingsGoals, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('controlfin_bankAccounts', JSON.stringify(bankAccounts));
     if (currentUser) {
-      saveUserData('bankAccounts', bankAccounts);
+      const timeoutId = setTimeout(() => {
+        saveUserData('bankAccounts', bankAccounts);
+      }, 2000);
+      return () => clearTimeout(timeoutId);
     }
   }, [bankAccounts, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('controlfin_financialEntries', JSON.stringify(financialEntries));
     if (currentUser) {
-      saveUserData('financialEntries', financialEntries);
+      const timeoutId = setTimeout(() => {
+        saveUserData('financialEntries', financialEntries);
+      }, 2000);
+      return () => clearTimeout(timeoutId);
     }
   }, [financialEntries, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('controlfin_accountBalance', JSON.stringify(accountBalance));
     if (currentUser) {
-      saveUserData('accountBalance', accountBalance);
+      const timeoutId = setTimeout(() => {
+        saveUserData('accountBalance', accountBalance);
+      }, 2000);
+      return () => clearTimeout(timeoutId);
     }
   }, [accountBalance, currentUser]);
 
