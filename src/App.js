@@ -14,9 +14,10 @@ import ResetPassword from './pages/ResetPassword';
 import EmailVerification from './pages/EmailVerification';
 import Profile from './pages/Profile';
 import Support from './pages/Support';
+import SyncNotification from './components/SyncNotification';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { AppProvider } from './context/AppContext';
+import { AppProvider, useAppContext } from './context/AppContext';
 
 function App() {
   return (
@@ -44,6 +45,16 @@ function AuthenticatedApp() {
 
   return (
     <AppProvider>
+      <AuthenticatedRoutes />
+    </AppProvider>
+  );
+}
+
+function AuthenticatedRoutes() {
+  const { isLoading, lastSync } = useAppContext();
+
+  return (
+    <>
       <Routes>
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="/reset-password" element={<ResetPassword />} />
@@ -61,7 +72,8 @@ function AuthenticatedApp() {
           <Route path="profile" element={<Profile />} />
         </Route>
       </Routes>
-    </AppProvider>
+      <SyncNotification isLoading={isLoading} lastSync={lastSync} />
+    </>
   );
 }
 

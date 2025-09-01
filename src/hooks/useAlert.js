@@ -106,34 +106,17 @@ const useAlert = () => {
   }, [showAlert, hideAlert]);
 
   const showLogoutConfirm = useCallback((onLogout) => {
-    // Verificar se o usuário já marcou para não mostrar mais
-    const skipLogoutConfirm = localStorage.getItem('skipLogoutConfirm');
-    if (skipLogoutConfirm === 'true') {
-      onLogout();
-      return;
-    }
-
     showAlert({
       type: 'warning',
       title: 'Confirmar saída',
       message: 'Tem certeza que deseja sair do sistema?',
-      showCheckbox: true,
-      checkboxLabel: 'Não mostrar esta mensagem novamente',
-      checkboxChecked: false,
-      onCheckboxChange: (checked) => {
-        setAlert(prev => ({ ...prev, checkboxChecked: checked }));
-      },
       onConfirm: () => {
-        // Salvar preferência se marcado
-        if (alert.checkboxChecked) {
-          localStorage.setItem('skipLogoutConfirm', 'true');
-        }
         onLogout();
         hideAlert();
       },
       onCancel: hideAlert
     });
-  }, [showAlert, hideAlert, alert.checkboxChecked]);
+  }, [showAlert, hideAlert]);
 
   return {
     alert,

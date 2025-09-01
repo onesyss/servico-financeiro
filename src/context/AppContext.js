@@ -1,4 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAuth } from './AuthContext';
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase/config';
 
 // Criar o contexto
 const AppContext = createContext();
@@ -8,6 +11,8 @@ export const useAppContext = () => useContext(AppContext);
 
 // Provedor do contexto
 export const AppProvider = ({ children }) => {
+  const { currentUser } = useAuth();
+  
   // Estado para despesas
   const [expenses, setExpenses] = useState(() => {
     const savedExpenses = localStorage.getItem('controlfin_expenses');
@@ -53,34 +58,136 @@ export const AppProvider = ({ children }) => {
     };
   });
 
-  // Salvar dados no localStorage quando o estado mudar
+  // Estado para controle de sincronização
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastSync, setLastSync] = useState(null);
+
+  // Função para carregar dados do Firestore quando o usuário fizer login
+  const loadUserData = async (userId) => {
+    try {
+      setIsLoading(true);
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        
+        // Carregar dados do Firestore se existirem, senão manter dados locais
+        if (userData.expenses) {
+          setExpenses(userData.expenses);
+          localStorage.setItem('controlfin_expenses', JSON.stringify(userData.expenses));
+        }
+        
+        if (userData.debts) {
+          setDebts(userData.debts);
+          localStorage.setItem('controlfin_debts', JSON.stringify(userData.debts));
+        }
+        
+        if (userData.fixedBills) {
+          setFixedBills(userData.fixedBills);
+          localStorage.setItem('controlfin_fixedBills', JSON.stringify(userData.fixedBills));
+        }
+        
+        if (userData.savingsGoals) {
+          setSavingsGoals(userData.savingsGoals);
+          localStorage.setItem('controlfin_savingsGoals', JSON.stringify(userData.savingsGoals));
+        }
+        
+        if (userData.bankAccounts) {
+          setBankAccounts(userData.bankAccounts);
+          localStorage.setItem('controlfin_bankAccounts', JSON.stringify(userData.bankAccounts));
+        }
+        
+        if (userData.financialEntries) {
+          setFinancialEntries(userData.financialEntries);
+          localStorage.setItem('controlfin_financialEntries', JSON.stringify(userData.financialEntries));
+        }
+        
+        if (userData.accountBalance) {
+          setAccountBalance(userData.accountBalance);
+          localStorage.setItem('controlfin_accountBalance', JSON.stringify(userData.accountBalance));
+        }
+        
+        setLastSync(new Date());
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados do usuário:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Função para salvar dados no Firestore
+  const saveUserData = async (dataType, data) => {
+    if (!currentUser) return;
+    
+    try {
+      const userRef = doc(db, 'users', currentUser.uid);
+      await updateDoc(userRef, {
+        [dataType]: data,
+        lastUpdated: new Date()
+      });
+      setLastSync(new Date());
+    } catch (error) {
+      console.error(`Erro ao salvar ${dataType} no Firestore:`, error);
+    }
+  };
+
+  // Carregar dados quando o usuário fizer login
+  useEffect(() => {
+    if (currentUser) {
+      loadUserData(currentUser.uid);
+    }
+  }, [currentUser]);
+
+  // Salvar dados no localStorage e Firestore quando o estado mudar
   useEffect(() => {
     localStorage.setItem('controlfin_expenses', JSON.stringify(expenses));
-  }, [expenses]);
+    if (currentUser) {
+      saveUserData('expenses', expenses);
+    }
+  }, [expenses, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('controlfin_debts', JSON.stringify(debts));
-  }, [debts]);
+    if (currentUser) {
+      saveUserData('debts', debts);
+    }
+  }, [debts, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('controlfin_fixedBills', JSON.stringify(fixedBills));
-  }, [fixedBills]);
+    if (currentUser) {
+      saveUserData('fixedBills', fixedBills);
+    }
+  }, [fixedBills, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('controlfin_savingsGoals', JSON.stringify(savingsGoals));
-  }, [savingsGoals]);
+    if (currentUser) {
+      saveUserData('savingsGoals', savingsGoals);
+    }
+  }, [savingsGoals, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('controlfin_bankAccounts', JSON.stringify(bankAccounts));
-  }, [bankAccounts]);
+    if (currentUser) {
+      saveUserData('bankAccounts', bankAccounts);
+    }
+  }, [bankAccounts, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('controlfin_financialEntries', JSON.stringify(financialEntries));
-  }, [financialEntries]);
+    if (currentUser) {
+      saveUserData('financialEntries', financialEntries);
+    }
+  }, [financialEntries, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('controlfin_accountBalance', JSON.stringify(accountBalance));
-  }, [accountBalance]);
+    if (currentUser) {
+      saveUserData('accountBalance', accountBalance);
+    }
+  }, [accountBalance, currentUser]);
 
   // Funções para manipular contas bancárias
   const addBankAccount = (account) => {
@@ -466,6 +573,8 @@ export const AppProvider = ({ children }) => {
     accountBalance,
     bankAccounts,
     financialEntries,
+    isLoading,
+    lastSync,
     addExpense,
     updateExpense,
     deleteExpense,

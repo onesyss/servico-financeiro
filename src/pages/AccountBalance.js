@@ -277,11 +277,13 @@ function AccountBalance() {
     const account = bankAccounts.find(a => a.id === id);
     if (!account) return 'Conta não encontrada';
     
-    let displayName = account.name;
+    let displayName = '';
     if (account.institution) {
-      displayName += ` (${account.institution})`;
+      displayName = `${account.institution} - ${account.name}`;
     } else if (account.bank) {
-      displayName += ` (${account.bank})`;
+      displayName = `${account.bank} - ${account.name}`;
+    } else {
+      displayName = account.name;
     }
     
     return displayName;
@@ -402,7 +404,7 @@ function AccountBalance() {
                   style={{ backgroundColor: account.color }}
                 ></div>
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                  {account.name}
+                  {account.institution ? account.institution : account.bank}
                 </h3>
                 {account.isDefault && (
                   <StarIcon className="w-4 h-4 text-yellow-500" title="Conta padrão" />
@@ -425,10 +427,9 @@ function AccountBalance() {
                  </button>
                </div>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              {account.bank}
-              {account.institution && ` • ${account.institution}`}
-            </p>
+                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+               {account.name}
+             </p>
                          <p className={`text-lg font-bold ${account.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                {formatCurrency(account.balance)}
              </p>
@@ -624,7 +625,7 @@ function AccountBalance() {
                    <option value="">Selecione uma conta</option>
                    {bankAccounts.map(account => (
                      <option key={account.id} value={account.id}>
-                       {account.name} ({account.bank}) - {formatCurrency(account.balance)}
+                       {getBankAccountName(account.id)} - {formatCurrency(account.balance)}
                      </option>
                    ))}
                  </select>
@@ -732,7 +733,7 @@ function AccountBalance() {
                    <option value="">Selecione uma conta</option>
                    {bankAccounts.map(account => (
                      <option key={account.id} value={account.id}>
-                       {account.name} ({account.bank}) - {formatCurrency(account.balance)}
+                       {getBankAccountName(account.id)} - {formatCurrency(account.balance)}
                      </option>
                    ))}
                  </select>
@@ -832,70 +833,70 @@ function AccountBalance() {
               </button>
             </div>
             
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Nome da Conta *
-                </label>
-                <input
-                  type="text"
-                  value={editingBankAccount ? editingBankAccount.name : newBankAccount.name}
-                  onChange={(e) => {
-                    if (editingBankAccount) {
-                      setEditingBankAccount({...editingBankAccount, name: e.target.value});
-                    } else {
-                      setNewBankAccount({...newBankAccount, name: e.target.value});
-                    }
-                  }}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  placeholder="Ex: Conta Principal, Nubank, Carteira"
-                />
-              </div>
+                         <div className="space-y-4">
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                   Instituição
+                 </label>
+                 <input
+                   type="text"
+                   value={editingBankAccount ? editingBankAccount.institution : (newBankAccount.institution || '')}
+                   onChange={(e) => {
+                     if (editingBankAccount) {
+                       setEditingBankAccount({...editingBankAccount, institution: e.target.value});
+                     } else {
+                       setNewBankAccount({...newBankAccount, institution: e.target.value});
+                     }
+                   }}
+                   className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                   placeholder="Ex: Nubank, Itaú, Banco do Brasil"
+                 />
+               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Tipo *
-                </label>
-                <select
-                  value={editingBankAccount ? editingBankAccount.bank : newBankAccount.bank}
-                  onChange={(e) => {
-                    if (editingBankAccount) {
-                      setEditingBankAccount({...editingBankAccount, bank: e.target.value});
-                    } else {
-                      setNewBankAccount({...newBankAccount, bank: e.target.value});
-                    }
-                  }}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                >
-                  <option value="">Selecione o tipo</option>
-                  <option value="Conta Bancária">Conta Bancária</option>
-                  <option value="Cartão de Crédito">Cartão de Crédito</option>
-                  <option value="Cartão de Débito">Cartão de Débito</option>
-                  <option value="Carteira">Carteira</option>
-                  <option value="Poupança">Poupança</option>
-                  <option value="Investimento">Investimento</option>
-                  <option value="Outro">Outro</option>
-                </select>
-              </div>
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                   Nome da Conta *
+                 </label>
+                 <input
+                   type="text"
+                   value={editingBankAccount ? editingBankAccount.name : newBankAccount.name}
+                   onChange={(e) => {
+                     if (editingBankAccount) {
+                       setEditingBankAccount({...editingBankAccount, name: e.target.value});
+                     } else {
+                       setNewBankAccount({...newBankAccount, name: e.target.value});
+                     }
+                   }}
+                   className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                   placeholder="Ex: Conta Principal, Nubank, Carteira"
+                 />
+               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Instituição
-                </label>
-                <input
-                  type="text"
-                  value={editingBankAccount ? editingBankAccount.institution : (newBankAccount.institution || '')}
-                  onChange={(e) => {
-                    if (editingBankAccount) {
-                      setEditingBankAccount({...editingBankAccount, institution: e.target.value});
-                    } else {
-                      setNewBankAccount({...newBankAccount, institution: e.target.value});
-                    }
-                  }}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  placeholder="Ex: Nubank, Itaú, Banco do Brasil"
-                />
-              </div>
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                   Tipo *
+                 </label>
+                 <select
+                   value={editingBankAccount ? editingBankAccount.bank : newBankAccount.bank}
+                   onChange={(e) => {
+                     if (editingBankAccount) {
+                       setEditingBankAccount({...editingBankAccount, bank: e.target.value});
+                     } else {
+                       setNewBankAccount({...newBankAccount, bank: e.target.value});
+                     }
+                   }}
+                   className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                 >
+                   <option value="">Selecione o tipo</option>
+                   <option value="Conta Bancária">Conta Bancária</option>
+                   <option value="Cartão de Crédito">Cartão de Crédito</option>
+                   <option value="Cartão de Débito">Cartão de Débito</option>
+                   <option value="Carteira">Carteira</option>
+                   <option value="Poupança">Poupança</option>
+                   <option value="Investimento">Investimento</option>
+                   <option value="Outro">Outro</option>
+                 </select>
+               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

@@ -15,6 +15,7 @@ function Dashboard() {
     savingsGoals,
     accountBalance,
     bankAccounts,
+    isLoading,
     calculateTotalExpenses,
     calculateTotalDebts,
     calculateTotalFixedBills,
@@ -88,6 +89,23 @@ function Dashboard() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(value);
+  };
+
+  // Função para obter nome da conta bancária
+  const getBankAccountName = (id) => {
+    const account = bankAccounts.find(a => a.id === id);
+    if (!account) return 'Conta não encontrada';
+    
+    let displayName = '';
+    if (account.institution) {
+      displayName = `${account.institution} - ${account.name}`;
+    } else if (account.bank) {
+      displayName = `${account.bank} - ${account.name}`;
+    } else {
+      displayName = account.name;
+    }
+    
+    return displayName;
   };
 
   // Função para atualizar dados do gráfico de categorias
@@ -263,6 +281,12 @@ function Dashboard() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
           <p className="text-gray-600 dark:text-gray-400">Visão geral das suas finanças</p>
         </div>
+        {isLoading && (
+          <div className="flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <span>Sincronizando...</span>
+          </div>
+        )}
       </div>
 
       {/* Cards de resumo */}
@@ -467,11 +491,11 @@ function Dashboard() {
                       style={{ backgroundColor: account.color }}
                     ></div>
                     <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                      {account.name}
+                      {account.institution ? account.institution : account.bank}
                     </h3>
                   </div>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{account.bank}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{account.name}</p>
                 <p className={`text-lg font-bold ${account.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                   {formatCurrency(account.balance)}
                 </p>

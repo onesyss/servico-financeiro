@@ -73,6 +73,34 @@ function FinancialEntries() {
     { value: 'boleto', label: 'Boleto' }
   ];
 
+  // Função para formatar números com separadores de milhares
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  };
+
+  // Função para obter nome da conta bancária
+  const getBankAccountName = (id) => {
+    if (id === 'cash') return 'Dinheiro em Espécie';
+    const account = bankAccounts.find(a => a.id === id);
+    if (!account) return 'Conta não encontrada';
+    
+    let displayName = '';
+    if (account.institution) {
+      displayName = `${account.institution} - ${account.name}`;
+    } else if (account.bank) {
+      displayName = `${account.bank} - ${account.name}`;
+    } else {
+      displayName = account.name;
+    }
+    
+    return displayName;
+  };
+
   // Função para adicionar lançamento
   const handleAddEntry = () => {
     if (!newEntry.description || !newEntry.amount || !newEntry.bankAccountId || !newEntry.dueDate) {
@@ -137,12 +165,7 @@ function FinancialEntries() {
     setShowEditModal(true);
   };
 
-  // Função para obter nome da conta bancária
-  const getBankAccountName = (id) => {
-    if (id === 'cash') return 'Dinheiro em Espécie';
-    const account = bankAccounts.find(a => a.id === id);
-    return account ? `${account.name} (${account.bank})` : 'Conta não encontrada';
-  };
+
 
   // Função para obter label da forma de pagamento
   const getPaymentMethodLabel = (value) => {
@@ -419,7 +442,7 @@ function FinancialEntries() {
                   <option value="cash">Dinheiro em Espécie</option>
                   {bankAccounts.map(account => (
                     <option key={account.id} value={account.id}>
-                      {account.name} ({account.bank}) - R$ {account.balance.toFixed(2)}
+                      {getBankAccountName(account.id)} - {formatCurrency(account.balance)}
                     </option>
                   ))}
                 </select>
@@ -591,7 +614,7 @@ function FinancialEntries() {
                   <option value="cash">Dinheiro em Espécie</option>
                   {bankAccounts.map(account => (
                     <option key={account.id} value={account.id}>
-                      {account.name} ({account.bank}) - R$ {account.balance.toFixed(2)}
+                      {getBankAccountName(account.id)} - {formatCurrency(account.balance)}
                     </option>
                   ))}
                 </select>
