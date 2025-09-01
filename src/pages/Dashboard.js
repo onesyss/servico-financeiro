@@ -3,6 +3,8 @@ import { useAppContext } from '../context/AppContext';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { CalendarIcon, CreditCardIcon, BanknotesIcon, ArrowTrendingUpIcon, WalletIcon, BuildingLibraryIcon } from '@heroicons/react/24/outline';
+import SyncStatus from '../components/SyncStatus';
+import SyncDebug from '../components/SyncDebug';
 
 // Registrar componentes do Chart.js
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
@@ -16,6 +18,7 @@ function Dashboard() {
     accountBalance,
     bankAccounts,
     isLoading,
+    lastSync,
     calculateTotalExpenses,
     calculateTotalDebts,
     calculateTotalFixedBills,
@@ -280,14 +283,19 @@ function Dashboard() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
           <p className="text-gray-600 dark:text-gray-400">Visão geral das suas finanças</p>
+          {lastSync && (
+            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+              Última sincronização: {lastSync.toLocaleString('pt-BR')}
+            </p>
+          )}
         </div>
-        {isLoading && (
-          <div className="flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-            <span>Sincronizando...</span>
-          </div>
-        )}
+        <div className="flex items-center space-x-4">
+          <SyncStatus isLoading={isLoading} lastSync={lastSync} />
+        </div>
       </div>
+
+      {/* Debug de Sincronização - Remover depois */}
+      <SyncDebug />
 
       {/* Cards de resumo */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
