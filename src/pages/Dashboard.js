@@ -19,6 +19,9 @@ function Dashboard() {
     bankAccounts,
     isLoading,
     lastSync,
+    syncError,
+    syncRetryCount,
+    forceSync,
     calculateTotalExpenses,
     calculateTotalDebts,
     calculateTotalFixedBills,
@@ -290,7 +293,21 @@ function Dashboard() {
           )}
         </div>
         <div className="flex items-center space-x-4">
-          <SyncStatus isLoading={isLoading} lastSync={lastSync} />
+          <SyncStatus 
+            isLoading={isLoading} 
+            lastSync={lastSync} 
+            syncError={syncError}
+            syncRetryCount={syncRetryCount}
+          />
+          {syncError && (
+            <button
+              onClick={forceSync}
+              disabled={isLoading}
+              className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            >
+              Sincronizar Manualmente
+            </button>
+          )}
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { CloudArrowUpIcon, CloudArrowDownIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
-const SyncStatus = ({ isLoading, lastSync, syncError }) => {
+const SyncStatus = ({ isLoading, lastSync, syncError, syncRetryCount }) => {
   const getStatusIcon = () => {
     if (syncError) {
       return <ExclamationTriangleIcon className="h-4 w-4 text-red-600" />;
@@ -22,7 +22,7 @@ const SyncStatus = ({ isLoading, lastSync, syncError }) => {
 
   const getStatusText = () => {
     if (syncError) {
-      return 'Erro na sincronização';
+      return `Erro na sincronização${syncRetryCount > 0 ? ` (${syncRetryCount} tentativas)` : ''}`;
     }
     
     if (isLoading) {
