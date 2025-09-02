@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useAppContext } from '../context/AppContext';
+import { useApp } from '../context/AppContext';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { CalendarIcon, CreditCardIcon, BanknotesIcon, ArrowTrendingUpIcon, WalletIcon, BuildingLibraryIcon } from '@heroicons/react/24/outline';
-import SyncStatus from '../components/SyncStatus';
-import SyncDebug from '../components/SyncDebug';
-import SyncTest from '../components/SyncTest';
-import QuotaStatus from '../components/QuotaStatus';
+
 
 // Registrar componentes do Chart.js
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
@@ -16,21 +13,11 @@ function Dashboard() {
     expenses, 
     debts, 
     fixedBills, 
-    savingsGoals,
-    accountBalance,
-    bankAccounts,
-    isLoading,
-    lastSync,
-    syncError,
-    syncRetryCount,
-    forceSync,
-    calculateTotalExpenses,
-    calculateTotalDebts,
-    calculateTotalFixedBills,
-    calculateTotalSavings,
-    getExpensesByCategory,
-    getTotalBankBalance
-  } = useAppContext();
+    savings, 
+    bankAccounts, 
+    selectedAccount, 
+    setSelectedAccount
+  } = useApp();
 
   // Estado para o mês e ano selecionados
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -114,6 +101,42 @@ function Dashboard() {
     }
     
     return displayName;
+  };
+
+  // Funções de cálculo
+  const calculateTotalExpenses = () => {
+    return expenses.reduce((total, expense) => total + parseFloat(expense.amount || 0), 0);
+  };
+
+  const calculateTotalDebts = () => {
+    return debts.reduce((total, debt) => total + parseFloat(debt.amount || 0), 0);
+  };
+
+  const calculateTotalFixedBills = () => {
+    return fixedBills.reduce((total, bill) => total + parseFloat(bill.amount || 0), 0);
+  };
+
+  const calculateTotalSavings = () => {
+    return savings.reduce((total, saving) => total + parseFloat(saving.currentAmount || 0), 0);
+  };
+
+  const getTotalBankBalance = () => {
+    return bankAccounts.reduce((total, account) => total + parseFloat(account.balance || 0), 0);
+  };
+
+  const getExpensesByCategory = (month, year) => {
+    const filteredExpenses = expenses.filter(expense => {
+      const expenseDate = new Date(expense.date);
+      return expenseDate.getMonth() === month - 1 && expenseDate.getFullYear() === year;
+    });
+
+    const categories = {};
+    filteredExpenses.forEach(expense => {
+      const category = expense.category || 'Sem categoria';
+      categories[category] = (categories[category] || 0) + parseFloat(expense.amount || 0);
+    });
+
+    return categories;
   };
 
   // Função para atualizar dados do gráfico de categorias
@@ -288,39 +311,8 @@ function Dashboard() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
           <p className="text-gray-600 dark:text-gray-400">Visão geral das suas finanças</p>
-          {lastSync && (
-            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-              Última sincronização: {lastSync.toLocaleString('pt-BR')}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center space-x-4">
-          <SyncStatus 
-            isLoading={isLoading} 
-            lastSync={lastSync} 
-            syncError={syncError}
-            syncRetryCount={syncRetryCount}
-          />
-          {syncError && (
-            <button
-              onClick={forceSync}
-              disabled={isLoading}
-              className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-            >
-              Sincronizar Manualmente
-            </button>
-          )}
         </div>
       </div>
-
-      {/* Status da Cota do Firebase */}
-      <QuotaStatus syncError={syncError} />
-
-      {/* Debug de Sincronização - Remover depois */}
-      <SyncDebug />
-      
-      {/* Teste de Sincronização - Remover depois */}
-      <SyncTest />
 
       {/* Cards de resumo */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
@@ -334,9 +326,9 @@ function Dashboard() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Saldo Disponível</dt>
                   <dd className="flex items-baseline">
-                                    <div className={`text-base font-semibold ${accountBalance.currentBalance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600 dark:text-red-400'}`}>
-                  {formatCurrency(accountBalance.currentBalance)}
-                </div>
+                    <div className={`text-base font-semibold ${getTotalBankBalance() >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600 dark:text-red-400'}`}>
+                      {formatCurrency(getTotalBankBalance())}
+                    </div>
                   </dd>
                 </dl>
               </div>

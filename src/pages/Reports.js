@@ -8,12 +8,12 @@ import {
   ArrowDownTrayIcon,
   FunnelIcon
 } from '@heroicons/react/24/outline';
-import { useAppContext } from '../context/AppContext';
+import { useApp } from '../context/AppContext';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 function Reports() {
-  const { expenses, fixedBills, debts, savingsGoals, accountBalance } = useAppContext();
+  const { expenses, fixedBills, debts, savings, bankAccounts } = useApp();
   
   // Estados para filtros
   const [dateFilter, setDateFilter] = useState({
@@ -109,23 +109,23 @@ function Reports() {
     let filteredExpenses = [...expenses];
     let filteredFixedBills = [...fixedBills];
     let filteredDebts = [...debts];
-    let filteredSavings = [...savingsGoals];
-    let filteredTransactions = [...accountBalance.transactions];
+    let filteredSavings = [...savings];
+    let filteredTransactions = [...expenses];
 
     // Aplicar filtro de data se especificado
     if (dateFilter.startDate || dateFilter.endDate) {
       filteredExpenses = filterDataByPeriod(expenses, dateFilter.startDate, dateFilter.endDate);
       filteredFixedBills = filterDataByPeriod(fixedBills, dateFilter.startDate, dateFilter.endDate);
       filteredDebts = filterDataByPeriod(debts, dateFilter.startDate, dateFilter.endDate);
-      filteredSavings = filterDataByPeriod(savingsGoals, dateFilter.startDate, dateFilter.endDate);
-      filteredTransactions = filterDataByPeriod(accountBalance.transactions, dateFilter.startDate, dateFilter.endDate);
+      filteredSavings = filterDataByPeriod(savings, dateFilter.startDate, dateFilter.endDate);
+              filteredTransactions = filterDataByPeriod(expenses, dateFilter.startDate, dateFilter.endDate);
     } else {
       // Aplicar filtro de mês/ano
       filteredExpenses = filterDataByMonthYear(expenses, selectedMonth, selectedYear);
       filteredFixedBills = filterDataByMonthYear(fixedBills, selectedMonth, selectedYear);
       filteredDebts = filterDataByMonthYear(debts, selectedMonth, selectedYear);
-      filteredSavings = filterDataByMonthYear(savingsGoals, selectedMonth, selectedYear);
-      filteredTransactions = filterDataByMonthYear(accountBalance.transactions, selectedMonth, selectedYear);
+              filteredSavings = filterDataByMonthYear(savings, selectedMonth, selectedYear);
+              filteredTransactions = filterDataByMonthYear(expenses, selectedMonth, selectedYear);
     }
 
     setFilteredData({
@@ -135,7 +135,7 @@ function Reports() {
       savings: filteredSavings,
       transactions: filteredTransactions
     });
-  }, [expenses, fixedBills, debts, savingsGoals, accountBalance.transactions, dateFilter, selectedMonth, selectedYear]);
+  }, [expenses, fixedBills, debts, savings, dateFilter, selectedMonth, selectedYear]);
 
   // Calcular totais
   const calculateTotals = () => {

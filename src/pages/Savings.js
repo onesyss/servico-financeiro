@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { useAppContext } from '../context/AppContext';
+import { useApp } from '../context/AppContext';
 import useAlert from '../hooks/useAlert';
 import Alert from '../components/Alert';
 
 function Savings() {
   // Usar o contexto global para acessar as metas de economia
-  const { savingsGoals, addSavingsGoal, updateSavingsGoal, deleteSavingsGoal, addAmountToSavingsGoal } = useAppContext();
+  const { savings, addSaving, updateSaving, deleteSaving } = useApp();
   
   // Hook para gerenciar alertas
   const { alert, showDeleteConfirm, showEditConfirm, showSuccess, showError, hideAlert } = useAlert();
@@ -113,7 +113,7 @@ function Savings() {
 
   // Função para excluir uma meta
   const handleDelete = (id) => {
-    const goal = savingsGoals.find(g => g.id === id);
+    const goal = savings.find(g => g.id === id);
     if (goal) {
       showDeleteConfirm(goal.description, () => {
         try {
@@ -128,14 +128,18 @@ function Savings() {
 
   // Função para adicionar valor a uma meta
   const handleAddAmount = (id, amount) => {
-    addAmountToSavingsGoal(id, amount);
+    const goal = savings.find(g => g.id === id);
+    if (goal) {
+      const newCurrentAmount = parseFloat(goal.currentAmount || 0) + parseFloat(amount);
+      updateSaving(id, { currentAmount: newCurrentAmount.toString() });
+    }
   };
 
   // Calcular total economizado
-  const totalSaved = savingsGoals.reduce((total, goal) => total + parseFloat(goal.currentAmount), 0);
+  const totalSaved = savings.reduce((total, goal) => total + parseFloat(goal.currentAmount || 0), 0);
 
   // Calcular total a economizar
-  const totalTarget = savingsGoals.reduce((total, goal) => total + parseFloat(goal.targetAmount), 0);
+  const totalTarget = savings.reduce((total, goal) => total + parseFloat(goal.targetAmount || 0), 0);
 
   // Calcular porcentagem total economizada
   const totalPercentage = totalTarget > 0 ? (totalSaved / totalTarget) * 100 : 0;
@@ -344,8 +348,8 @@ function Savings() {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {savingsGoals.length > 0 ? (
-                savingsGoals.map((goal) => {
+                      {savings.length > 0 ? (
+          savings.map((goal) => {
                   const percentage = (goal.currentAmount / goal.targetAmount) * 100;
                   return (
                     <tr key={goal.id}>

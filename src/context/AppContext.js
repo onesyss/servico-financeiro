@@ -1,814 +1,676 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { doc, setDoc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase/config';
 
-// Criar o contexto
 const AppContext = createContext();
 
-// Hook personalizado para usar o contexto
-export const useAppContext = () => useContext(AppContext);
+// Estado inicial
+const initialState = {
+  expenses: [],
+  debts: [],
+  fixedBills: [],
+  savings: [],
+  bankAccounts: [],
+  newExpense: {
+    description: '',
+    amount: '',
+    date: '',
+    category: '',
+    account: '',
+    type: 'expense'
+  },
+  newDebt: {
+    description: '',
+    amount: '',
+    dueDate: '',
+    creditor: '',
+    account: '',
+    isPaid: false
+  },
+  newFixedBill: {
+    description: '',
+    amount: '',
+    dueDay: '',
+    category: '',
+    account: '',
+    isPaid: false
+  },
+  newSaving: {
+    description: '',
+    targetAmount: '',
+    currentAmount: '',
+    targetDate: '',
+    account: ''
+  },
+  newBankAccount: {
+    name: '',
+    balance: '',
+    type: 'bank',
+    color: '#3B82F6',
+    institution: ''
+  },
+  selectedAccount: '',
+  selectedMonth: new Date().getMonth(),
+  selectedYear: new Date().getFullYear()
+};
 
-// Provedor do contexto
-export const AppProvider = ({ children }) => {
+// Reducer para gerenciar o estado
+function appReducer(state, action) {
+  switch (action.type) {
+    case 'SET_EXPENSES':
+      return { ...state, expenses: action.payload };
+    case 'SET_DEBTS':
+      return { ...state, debts: action.payload };
+    case 'SET_FIXED_BILLS':
+      return { ...state, fixedBills: action.payload };
+    case 'SET_SAVINGS':
+      return { ...state, savings: action.payload };
+    case 'SET_BANK_ACCOUNTS':
+      return { ...state, bankAccounts: action.payload };
+    case 'SET_NEW_EXPENSE':
+      return { ...state, newExpense: action.payload };
+    case 'SET_NEW_DEBT':
+      return { ...state, newDebt: action.payload };
+    case 'SET_NEW_FIXED_BILL':
+      return { ...state, newFixedBill: action.payload };
+    case 'SET_NEW_SAVING':
+      return { ...state, newSaving: action.payload };
+    case 'SET_NEW_BANK_ACCOUNT':
+      return { ...state, newBankAccount: action.payload };
+    case 'SET_SELECTED_ACCOUNT':
+      return { ...state, selectedAccount: action.payload };
+    case 'SET_SELECTED_MONTH':
+      return { ...state, selectedMonth: action.payload };
+    case 'SET_SELECTED_YEAR':
+      return { ...state, selectedYear: action.payload };
+    case 'RESET_NEW_EXPENSE':
+      return { ...state, newExpense: initialState.newExpense };
+    case 'RESET_NEW_DEBT':
+      return { ...state, newDebt: initialState.newDebt };
+    case 'RESET_NEW_FIXED_BILL':
+      return { ...state, newFixedBill: initialState.newFixedBill };
+    case 'RESET_NEW_SAVING':
+      return { ...state, newSaving: initialState.newSaving };
+    case 'RESET_NEW_BANK_ACCOUNT':
+      return { ...state, newBankAccount: initialState.newBankAccount };
+    default:
+      return state;
+  }
+}
+
+// Provider do contexto
+export function AppProvider({ children }) {
+  const [state, dispatch] = useReducer(appReducer, initialState);
   const { currentUser } = useAuth();
-  
-  // Estado para despesas
-  const [expenses, setExpenses] = useState(() => {
-    const savedExpenses = localStorage.getItem('controlfin_expenses');
-    return savedExpenses ? JSON.parse(savedExpenses) : [];
-  });
 
-  // Estado para dívidas
-  const [debts, setDebts] = useState(() => {
-    const savedDebts = localStorage.getItem('controlfin_debts');
-    return savedDebts ? JSON.parse(savedDebts) : [];
-  });
-
-  // Estado para contas fixas
-  const [fixedBills, setFixedBills] = useState(() => {
-    const savedFixedBills = localStorage.getItem('controlfin_fixedBills');
-    return savedFixedBills ? JSON.parse(savedFixedBills) : [];
-  });
-
-  // Estado para metas de economia
-  const [savingsGoals, setSavingsGoals] = useState(() => {
-    const savedSavingsGoals = localStorage.getItem('controlfin_savingsGoals');
-    return savedSavingsGoals ? JSON.parse(savedSavingsGoals) : [];
-  });
-
-  // Estado para contas bancárias
-  const [bankAccounts, setBankAccounts] = useState(() => {
-    const savedBankAccounts = localStorage.getItem('controlfin_bankAccounts');
-    return savedBankAccounts ? JSON.parse(savedBankAccounts) : [];
-  });
-
-  // Estado para lançamentos financeiros
-  const [financialEntries, setFinancialEntries] = useState(() => {
-    const savedEntries = localStorage.getItem('controlfin_financialEntries');
-    return savedEntries ? JSON.parse(savedEntries) : [];
-  });
-
-  // Estado para saldo em conta (mantido para compatibilidade)
-  const [accountBalance, setAccountBalance] = useState(() => {
-    const savedBalance = localStorage.getItem('controlfin_accountBalance');
-    return savedBalance ? JSON.parse(savedBalance) : {
-      currentBalance: 0,
-      transactions: []
-    };
-  });
-
-  // Estado para controle de sincronização
-  const [isLoading, setIsLoading] = useState(false);
-  const [lastSync, setLastSync] = useState(null);
-  const [syncError, setSyncError] = useState(null);
-  const [syncRetryCount, setSyncRetryCount] = useState(0);
-
-  // Função para sincronização manual
-  const forceSync = async () => {
-    if (!currentUser) return;
-    
-    try {
-      setIsLoading(true);
-      setSyncError(null);
-      console.log('Forçando sincronização manual...');
-      
-      // Salvar todos os dados locais no Firestore
-      await saveUserData('expenses', expenses);
-      await saveUserData('debts', debts);
-      await saveUserData('fixedBills', fixedBills);
-      await saveUserData('savingsGoals', savingsGoals);
-      await saveUserData('bankAccounts', bankAccounts);
-      await saveUserData('financialEntries', financialEntries);
-      await saveUserData('accountBalance', accountBalance);
-      
-      console.log('Sincronização manual concluída');
-      setLastSync(new Date());
-    } catch (error) {
-      console.error('Erro na sincronização manual:', error);
-      setSyncError(error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Função para carregar dados do Firestore quando o usuário fizer login
-  const loadUserData = async (userId) => {
-    try {
-      setIsLoading(true);
-      console.log('Carregando dados do usuário:', userId);
-      
-      const userDoc = await getDoc(doc(db, 'users', userId));
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        console.log('Dados encontrados no Firestore:', userData);
-        
-        // Sempre carregar dados do Firestore, sobrescrevendo dados locais
-        if (userData.expenses && Array.isArray(userData.expenses)) {
-          setExpenses(userData.expenses);
-          localStorage.setItem('controlfin_expenses', JSON.stringify(userData.expenses));
-          console.log('Expenses carregadas:', userData.expenses.length);
-        }
-        
-        if (userData.debts && Array.isArray(userData.debts)) {
-          setDebts(userData.debts);
-          localStorage.setItem('controlfin_debts', JSON.stringify(userData.debts));
-          console.log('Debts carregadas:', userData.debts.length);
-        }
-        
-        if (userData.fixedBills && Array.isArray(userData.fixedBills)) {
-          setFixedBills(userData.fixedBills);
-          localStorage.setItem('controlfin_fixedBills', JSON.stringify(userData.fixedBills));
-          console.log('FixedBills carregadas:', userData.fixedBills.length);
-        }
-        
-        if (userData.savingsGoals && Array.isArray(userData.savingsGoals)) {
-          setSavingsGoals(userData.savingsGoals);
-          localStorage.setItem('controlfin_savingsGoals', JSON.stringify(userData.savingsGoals));
-          console.log('SavingsGoals carregadas:', userData.savingsGoals.length);
-        }
-        
-        if (userData.bankAccounts && Array.isArray(userData.bankAccounts)) {
-          setBankAccounts(userData.bankAccounts);
-          localStorage.setItem('controlfin_bankAccounts', JSON.stringify(userData.bankAccounts));
-          console.log('BankAccounts carregadas:', userData.bankAccounts.length);
-        }
-        
-        if (userData.financialEntries && Array.isArray(userData.financialEntries)) {
-          setFinancialEntries(userData.financialEntries);
-          localStorage.setItem('controlfin_financialEntries', JSON.stringify(userData.financialEntries));
-          console.log('FinancialEntries carregadas:', userData.financialEntries.length);
-        }
-        
-        if (userData.accountBalance) {
-          setAccountBalance(userData.accountBalance);
-          localStorage.setItem('controlfin_accountBalance', JSON.stringify(userData.accountBalance));
-          console.log('AccountBalance carregado:', userData.accountBalance);
-        }
-        
-        setLastSync(new Date());
-        console.log('Dados carregados com sucesso do Firestore');
-      } else {
-        console.log('Nenhum documento encontrado para o usuário');
-        // Se não existir documento, criar um inicial
-        await setDoc(doc(db, 'users', userId), {
-          name: currentUser?.displayName || '',
-          email: currentUser?.email || '',
-          expenses: [],
-          debts: [],
-          fixedBills: [],
-          savingsGoals: [],
-          bankAccounts: [],
-          financialEntries: [],
-          accountBalance: {
-            currentBalance: 0,
-            transactions: []
-          },
-          createdAt: new Date(),
-          lastUpdated: new Date()
-        });
-        console.log('Documento inicial criado para o usuário');
-      }
-    } catch (error) {
-      console.error('Erro ao carregar dados do usuário:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Função para salvar dados no Firestore com retry e verificação de cota
-  const saveUserData = async (dataType, data, retryCount = 0) => {
-    if (!currentUser) {
-      console.log('❌ Usuário não logado, não salvando no Firestore');
-      return;
-    }
-    
-    try {
-      console.log(`💾 Salvando ${dataType} no Firestore (tentativa ${retryCount + 1}):`, data);
-      setSyncError(null);
-      
-      const userRef = doc(db, 'users', currentUser.uid);
-      
-      // Sempre usar setDoc para garantir que os dados sejam salvos
-      await setDoc(userRef, {
-        name: currentUser?.displayName || '',
-        email: currentUser?.email || '',
-        [dataType]: data,
-        lastUpdated: new Date(),
-        lastSyncAttempt: new Date(),
-        // Manter outros dados existentes
-        expenses: dataType === 'expenses' ? data : expenses,
-        debts: dataType === 'debts' ? data : debts,
-        fixedBills: dataType === 'fixedBills' ? data : fixedBills,
-        savingsGoals: dataType === 'savingsGoals' ? data : savingsGoals,
-        bankAccounts: dataType === 'bankAccounts' ? data : bankAccounts,
-        financialEntries: dataType === 'financialEntries' ? data : financialEntries,
-        accountBalance: dataType === 'accountBalance' ? data : accountBalance
-      }, { merge: true });
-      
-      console.log(`✅ ${dataType} salvo com sucesso no Firestore`);
-      setLastSync(new Date());
-      setSyncRetryCount(0);
-    } catch (error) {
-      console.error(`❌ Erro ao salvar ${dataType} no Firestore:`, error);
-      
-      // Verificar se é erro de cota
-      if (error.code === 'resource-exhausted' || error.message.includes('quota') || error.message.includes('cota')) {
-        console.log('🚨 Cota do Firebase excedida! Usando apenas localStorage.');
-        setSyncError('Cota do Firebase excedida. Dados salvos localmente.');
-        return; // Não tentar novamente se for erro de cota
-      }
-      
-      setSyncError(error.message);
-      
-      // Tentar novamente até 3 vezes apenas se não for erro de cota
-      if (retryCount < 3) {
-        console.log(`🔄 Tentando novamente em 2 segundos... (${retryCount + 1}/3)`);
-        setTimeout(() => {
-          saveUserData(dataType, data, retryCount + 1);
-        }, 2000);
-      } else {
-        console.error(`❌ Falha ao salvar ${dataType} após 3 tentativas`);
-        setSyncRetryCount(retryCount + 1);
-      }
-    }
-  };
-
-  // Carregar dados quando o usuário fizer login
+  // Carregar dados do localStorage quando o usuário fizer login
   useEffect(() => {
     if (currentUser) {
-      console.log('Usuário logado, iniciando sincronização:', currentUser.email);
-      loadUserData(currentUser.uid);
+      const userId = currentUser.uid;
       
-      // Configurar listener em tempo real para sincronização automática
-      const userRef = doc(db, 'users', currentUser.uid);
-      const unsubscribe = onSnapshot(userRef, (doc) => {
-        if (doc.exists()) {
-          const userData = doc.data();
-          console.log('🔄 Dados atualizados em tempo real do Firestore:', userData);
-          setSyncError(null);
-          
-          // Forçar atualização de todos os dados do Firestore
-          if (userData.expenses && Array.isArray(userData.expenses)) {
-            console.log('📊 Atualizando expenses:', userData.expenses.length, 'itens');
-            setExpenses(userData.expenses);
-            localStorage.setItem('controlfin_expenses', JSON.stringify(userData.expenses));
-          }
-          
-          if (userData.debts && Array.isArray(userData.debts)) {
-            console.log('💳 Atualizando debts:', userData.debts.length, 'itens');
-            setDebts(userData.debts);
-            localStorage.setItem('controlfin_debts', JSON.stringify(userData.debts));
-          }
-          
-          if (userData.fixedBills && Array.isArray(userData.fixedBills)) {
-            console.log('📅 Atualizando fixedBills:', userData.fixedBills.length, 'itens');
-            setFixedBills(userData.fixedBills);
-            localStorage.setItem('controlfin_fixedBills', JSON.stringify(userData.fixedBills));
-          }
-          
-          if (userData.savingsGoals && Array.isArray(userData.savingsGoals)) {
-            console.log('💰 Atualizando savingsGoals:', userData.savingsGoals.length, 'itens');
-            setSavingsGoals(userData.savingsGoals);
-            localStorage.setItem('controlfin_savingsGoals', JSON.stringify(userData.savingsGoals));
-          }
-          
-          if (userData.bankAccounts && Array.isArray(userData.bankAccounts)) {
-            console.log('🏦 Atualizando bankAccounts:', userData.bankAccounts.length, 'itens');
-            setBankAccounts(userData.bankAccounts);
-            localStorage.setItem('controlfin_bankAccounts', JSON.stringify(userData.bankAccounts));
-          }
-          
-          if (userData.financialEntries && Array.isArray(userData.financialEntries)) {
-            console.log('📝 Atualizando financialEntries:', userData.financialEntries.length, 'itens');
-            setFinancialEntries(userData.financialEntries);
-            localStorage.setItem('controlfin_financialEntries', JSON.stringify(userData.financialEntries));
-          }
-          
-          if (userData.accountBalance) {
-            console.log('💵 Atualizando accountBalance');
-            setAccountBalance(userData.accountBalance);
-            localStorage.setItem('controlfin_accountBalance', JSON.stringify(userData.accountBalance));
-          }
-          
-          setLastSync(new Date());
-          console.log('✅ Sincronização em tempo real concluída com sucesso');
-        } else {
-          console.log('⚠️ Documento não encontrado no listener em tempo real');
+      // Carregar dados do localStorage
+      const loadLocalData = () => {
+        try {
+          const localExpenses = JSON.parse(localStorage.getItem(`expenses_${userId}`)) || [];
+          const localDebts = JSON.parse(localStorage.getItem(`debts_${userId}`)) || [];
+          const localFixedBills = JSON.parse(localStorage.getItem(`fixedBills_${userId}`)) || [];
+          const localSavings = JSON.parse(localStorage.getItem(`savings_${userId}`)) || [];
+          const localBankAccounts = JSON.parse(localStorage.getItem(`bankAccounts_${userId}`)) || [];
+          const localSelectedAccount = localStorage.getItem(`selectedAccount_${userId}`) || '';
+
+          dispatch({ type: 'SET_EXPENSES', payload: localExpenses });
+          dispatch({ type: 'SET_DEBTS', payload: localDebts });
+          dispatch({ type: 'SET_FIXED_BILLS', payload: localFixedBills });
+          dispatch({ type: 'SET_SAVINGS', payload: localSavings });
+          dispatch({ type: 'SET_BANK_ACCOUNTS', payload: localBankAccounts });
+          dispatch({ type: 'SET_SELECTED_ACCOUNT', payload: localSelectedAccount });
+        } catch (error) {
+          console.error('Erro ao carregar dados do localStorage:', error);
         }
-      }, (error) => {
-        console.error('❌ Erro no listener em tempo real:', error);
-        setSyncError(error.message);
-      });
-      
-      // Cleanup do listener quando o componente for desmontado
-      return () => {
-        console.log('🔄 Desconectando listener em tempo real');
-        unsubscribe();
       };
+
+      loadLocalData();
     }
   }, [currentUser]);
 
-  // Salvar dados no localStorage e Firestore quando o estado mudar (com debounce)
-  useEffect(() => {
-    localStorage.setItem('controlfin_expenses', JSON.stringify(expenses));
+  // Salvar dados no localStorage sempre que houver mudanças
+  const saveToLocalStorage = (key, data) => {
     if (currentUser) {
-      // Debounce para evitar muitas escritas
-      const timeoutId = setTimeout(() => {
-        saveUserData('expenses', expenses);
-      }, 2000);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [expenses, currentUser]);
-
-  useEffect(() => {
-    localStorage.setItem('controlfin_debts', JSON.stringify(debts));
-    if (currentUser) {
-      const timeoutId = setTimeout(() => {
-        saveUserData('debts', debts);
-      }, 2000);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [debts, currentUser]);
-
-  useEffect(() => {
-    localStorage.setItem('controlfin_fixedBills', JSON.stringify(fixedBills));
-    if (currentUser) {
-      const timeoutId = setTimeout(() => {
-        saveUserData('fixedBills', fixedBills);
-      }, 2000);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [fixedBills, currentUser]);
-
-  useEffect(() => {
-    localStorage.setItem('controlfin_savingsGoals', JSON.stringify(savingsGoals));
-    if (currentUser) {
-      const timeoutId = setTimeout(() => {
-        saveUserData('savingsGoals', savingsGoals);
-      }, 2000);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [savingsGoals, currentUser]);
-
-  useEffect(() => {
-    localStorage.setItem('controlfin_bankAccounts', JSON.stringify(bankAccounts));
-    if (currentUser) {
-      const timeoutId = setTimeout(() => {
-        saveUserData('bankAccounts', bankAccounts);
-      }, 2000);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [bankAccounts, currentUser]);
-
-  useEffect(() => {
-    localStorage.setItem('controlfin_financialEntries', JSON.stringify(financialEntries));
-    if (currentUser) {
-      const timeoutId = setTimeout(() => {
-        saveUserData('financialEntries', financialEntries);
-      }, 2000);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [financialEntries, currentUser]);
-
-  useEffect(() => {
-    localStorage.setItem('controlfin_accountBalance', JSON.stringify(accountBalance));
-    if (currentUser) {
-      const timeoutId = setTimeout(() => {
-        saveUserData('accountBalance', accountBalance);
-      }, 2000);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [accountBalance, currentUser]);
-
-  // Funções para manipular contas bancárias
-  const addBankAccount = (account) => {
-    const id = bankAccounts.length > 0 ? Math.max(...bankAccounts.map(a => a.id)) + 1 : 1;
-    const newAccount = { 
-      ...account, 
-      id, 
-      balance: parseFloat(account.balance) || 0,
-      isDefault: bankAccounts.length === 0 // Primeira conta é padrão
-    };
-    setBankAccounts([...bankAccounts, newAccount]);
-  };
-
-  const updateBankAccount = (id, updatedAccount) => {
-    setBankAccounts(bankAccounts.map(account => 
-      account.id === id ? { ...updatedAccount, id, balance: parseFloat(updatedAccount.balance) || 0 } : account
-    ));
-  };
-
-  const deleteBankAccount = (id) => {
-    const accountToDelete = bankAccounts.find(account => account.id === id);
-    if (accountToDelete && accountToDelete.isDefault && bankAccounts.length > 1) {
-      // Se for a conta padrão e houver outras contas, tornar a próxima como padrão
-      const remainingAccounts = bankAccounts.filter(account => account.id !== id);
-      const newDefaultAccount = remainingAccounts[0];
-      setBankAccounts(remainingAccounts.map(account => 
-        account.id === newDefaultAccount.id ? { ...account, isDefault: true } : account
-      ));
-    } else {
-      setBankAccounts(bankAccounts.filter(account => account.id !== id));
-    }
-  };
-
-  const setDefaultBankAccount = (id) => {
-    setBankAccounts(bankAccounts.map(account => ({
-      ...account,
-      isDefault: account.id === id
-    })));
-  };
-
-  const updateBankAccountBalance = (id, amount) => {
-    setBankAccounts(bankAccounts.map(account => 
-      account.id === id ? { ...account, balance: account.balance + parseFloat(amount) } : account
-    ));
-  };
-
-  const getDefaultBankAccount = () => {
-    return bankAccounts.find(account => account.isDefault) || bankAccounts[0];
-  };
-
-  const getTotalBankBalance = () => {
-    return bankAccounts.reduce((total, account) => total + account.balance, 0);
-  };
-
-  // Funções para manipular lançamentos financeiros
-  const addFinancialEntry = (entry) => {
-    const id = financialEntries.length > 0 ? Math.max(...financialEntries.map(e => e.id)) + 1 : 1;
-    const newEntry = {
-      ...entry,
-      id,
-      isPaid: false,
-      createdAt: new Date().toISOString(),
-      installments: entry.isRecurring ? entry.installments || 1 : 1,
-      currentInstallment: 1
-    };
-
-    // Se for parcelado, criar múltiplos lançamentos
-    if (entry.isRecurring && entry.installments > 1) {
-      const entries = [];
-      for (let i = 0; i < entry.installments; i++) {
-        const installmentEntry = {
-          ...newEntry,
-          id: id + i,
-          currentInstallment: i + 1,
-          totalInstallments: entry.installments,
-          dueDate: (() => {
-            const date = new Date(entry.dueDate);
-            date.setMonth(date.getMonth() + i);
-            return date.toISOString().split('T')[0];
-          })()
-        };
-        entries.push(installmentEntry);
+      try {
+        localStorage.setItem(`${key}_${currentUser.uid}`, JSON.stringify(data));
+      } catch (error) {
+        console.error(`Erro ao salvar ${key} no localStorage:`, error);
       }
-      setFinancialEntries([...financialEntries, ...entries]);
-    } else {
-      setFinancialEntries([...financialEntries, newEntry]);
     }
   };
 
-  const updateFinancialEntry = (id, updatedEntry) => {
-    setFinancialEntries(financialEntries.map(entry => 
-      entry.id === id ? { ...updatedEntry, id } : entry
-    ));
-  };
-
-  const deleteFinancialEntry = (id) => {
-    setFinancialEntries(financialEntries.filter(entry => entry.id !== id));
-  };
-
-  const toggleFinancialEntryPaid = (id) => {
-    setFinancialEntries(financialEntries.map(entry => {
-      if (entry.id === id) {
-        const wasPaid = entry.isPaid;
-        const newEntry = { ...entry, isPaid: !wasPaid };
-        
-        // Se está marcando como pago, desconta da conta bancária
-        if (!wasPaid && entry.bankAccountId && entry.bankAccountId !== 'cash') {
-          updateBankAccountBalance(entry.bankAccountId, -parseFloat(entry.amount));
-        }
-        // Se está desmarcando como pago, adiciona de volta à conta bancária
-        else if (wasPaid && entry.bankAccountId && entry.bankAccountId !== 'cash') {
-          updateBankAccountBalance(entry.bankAccountId, parseFloat(entry.amount));
-        }
-        
-        return newEntry;
-      }
-      return entry;
-    }));
-  };
-
-  // Funções para manipular despesas
+  // Funções para gerenciar despesas
   const addExpense = (expense) => {
-    const id = expenses.length > 0 ? Math.max(...expenses.map(e => e.id)) + 1 : 1;
-    setExpenses([...expenses, { ...expense, id }]);
+    const newExpense = {
+      ...expense,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString()
+    };
+    const updatedExpenses = [...state.expenses, newExpense];
+    dispatch({ type: 'SET_EXPENSES', payload: updatedExpenses });
+    saveToLocalStorage('expenses', updatedExpenses);
   };
 
-  const updateExpense = (id, updatedExpense) => {
-    setExpenses(expenses.map(expense => 
-      expense.id === id ? { ...updatedExpense, id } : expense
-    ));
+  const updateExpense = (id, updates) => {
+    const oldExpense = state.expenses.find(expense => expense.id === id);
+    const updatedExpenses = state.expenses.map(expense =>
+      expense.id === id ? { ...expense, ...updates } : expense
+    );
+    dispatch({ type: 'SET_EXPENSES', payload: updatedExpenses });
+    saveToLocalStorage('expenses', updatedExpenses);
+
+    // Atualizar o saldo da conta bancária apenas se mudou a conta ou o valor
+    if (oldExpense && updates) {
+      // Se mudou a conta bancária
+      if (updates.bankAccountId && updates.bankAccountId !== oldExpense.bankAccountId) {
+        // Reverter saldo da conta antiga (se estava pago)
+        if (oldExpense.bankAccountId && oldExpense.bankAccountId !== 'cash' && oldExpense.isPaid) {
+          const oldAccount = state.bankAccounts.find(a => a.id === oldExpense.bankAccountId);
+          if (oldAccount) {
+            const oldBalance = parseFloat(oldAccount.balance || 0);
+            
+            // Calcular o valor a ser restaurado
+            let oldAmountToProcess;
+            if (oldExpense.isRecurring && oldExpense.installments > 1) {
+              const totalOldAmount = parseFloat(oldExpense.amount || 0);
+              oldAmountToProcess = totalOldAmount / oldExpense.installments;
+            } else {
+              oldAmountToProcess = parseFloat(oldExpense.amount || 0);
+            }
+            
+            const newOldBalance = oldBalance + Math.abs(oldAmountToProcess);
+            
+            const updatedOldAccount = { ...oldAccount, balance: newOldBalance.toString() };
+            const updatedBankAccounts1 = state.bankAccounts.map(a => 
+              a.id === oldExpense.bankAccountId ? updatedOldAccount : a
+            );
+            
+            dispatch({ type: 'SET_BANK_ACCOUNTS', payload: updatedBankAccounts1 });
+            saveToLocalStorage('bankAccounts', updatedBankAccounts1);
+          }
+        }
+
+        // Aplicar saldo na nova conta (se estiver pago)
+        if (updates.bankAccountId && updates.bankAccountId !== 'cash' && oldExpense.isPaid) {
+          const newAccount = state.bankAccounts.find(a => a.id === updates.bankAccountId);
+          if (newAccount) {
+            const newBalance = parseFloat(newAccount.balance || 0);
+            const newAmount = parseFloat(updates.amount || oldExpense.amount || 0);
+            
+            // Calcular o valor a ser descontado
+            let newAmountToProcess;
+            if (oldExpense.isRecurring && oldExpense.installments > 1) {
+              newAmountToProcess = newAmount / oldExpense.installments;
+            } else {
+              newAmountToProcess = newAmount;
+            }
+            
+            const finalNewBalance = newBalance - Math.abs(newAmountToProcess);
+            
+            const updatedNewAccount = { ...newAccount, balance: finalNewBalance.toString() };
+            const updatedBankAccounts2 = state.bankAccounts.map(a => 
+              a.id === updates.bankAccountId ? updatedNewAccount : a
+            );
+            
+            dispatch({ type: 'SET_BANK_ACCOUNTS', payload: updatedBankAccounts2 });
+            saveToLocalStorage('bankAccounts', updatedBankAccounts2);
+          }
+        }
+      } else if (updates.amount && updates.amount !== oldExpense.amount && oldExpense.bankAccountId && oldExpense.bankAccountId !== 'cash' && oldExpense.isPaid) {
+        // Se mudou apenas o valor e estava pago, ajustar o saldo
+        const account = state.bankAccounts.find(a => a.id === oldExpense.bankAccountId);
+        if (account) {
+          const currentBalance = parseFloat(account.balance || 0);
+          const oldAmount = parseFloat(oldExpense.amount || 0);
+          const newAmount = parseFloat(updates.amount || 0);
+          
+          // Calcular diferença considerando parcelas
+          let oldAmountToProcess, newAmountToProcess;
+          if (oldExpense.isRecurring && oldExpense.installments > 1) {
+            oldAmountToProcess = oldAmount / oldExpense.installments;
+            newAmountToProcess = newAmount / oldExpense.installments;
+          } else {
+            oldAmountToProcess = oldAmount;
+            newAmountToProcess = newAmount;
+          }
+          
+          const difference = Math.abs(newAmountToProcess) - Math.abs(oldAmountToProcess);
+          const finalBalance = currentBalance - difference;
+          
+          const updatedAccount = { ...account, balance: finalBalance.toString() };
+          const updatedBankAccounts = state.bankAccounts.map(a => 
+            a.id === oldExpense.bankAccountId ? updatedAccount : a
+          );
+          
+          dispatch({ type: 'SET_BANK_ACCOUNTS', payload: updatedBankAccounts });
+          saveToLocalStorage('bankAccounts', updatedBankAccounts);
+        }
+      }
+    }
   };
 
   const deleteExpense = (id) => {
-    setExpenses(expenses.filter(expense => expense.id !== id));
+    const expenseToDelete = state.expenses.find(expense => expense.id === id);
+    const updatedExpenses = state.expenses.filter(expense => expense.id !== id);
+    dispatch({ type: 'SET_EXPENSES', payload: updatedExpenses });
+    saveToLocalStorage('expenses', updatedExpenses);
+
+    // Reverter o saldo da conta bancária apenas se a despesa estava paga
+    if (expenseToDelete && expenseToDelete.bankAccountId && expenseToDelete.bankAccountId !== 'cash' && expenseToDelete.isPaid) {
+      const account = state.bankAccounts.find(a => a.id === expenseToDelete.bankAccountId);
+      if (account) {
+        const currentBalance = parseFloat(account.balance || 0);
+        
+        // Calcular o valor a ser restaurado
+        let expenseAmountToProcess;
+        if (expenseToDelete.isRecurring && expenseToDelete.installments > 1) {
+          const totalExpenseAmount = parseFloat(expenseToDelete.amount || 0);
+          expenseAmountToProcess = totalExpenseAmount / expenseToDelete.installments;
+        } else {
+          expenseAmountToProcess = parseFloat(expenseToDelete.amount || 0);
+        }
+        
+        const newBalance = currentBalance + Math.abs(expenseAmountToProcess); // Reverter a subtração
+        
+        const updatedAccount = { ...account, balance: newBalance.toString() };
+        const updatedBankAccounts = state.bankAccounts.map(a => 
+          a.id === expenseToDelete.bankAccountId ? updatedAccount : a
+        );
+        
+        dispatch({ type: 'SET_BANK_ACCOUNTS', payload: updatedBankAccounts });
+        saveToLocalStorage('bankAccounts', updatedBankAccounts);
+      }
+    }
   };
 
-  // Funções para manipular dívidas
+    // Função para alternar status de pago de uma despesa (botão principal)
+  const toggleExpensePaid = (id) => {
+    const expense = state.expenses.find(expense => expense.id === id);
+    if (expense && expense.bankAccountId && expense.bankAccountId !== 'cash') {
+      const newIsPaid = !expense.isPaid;
+      
+      // Se é parcelado, atualizar todas as parcelas
+      let updatedExpense;
+      if (expense.isRecurring && expense.installments > 1) {
+        const paidInstallments = Array(expense.installments).fill(newIsPaid);
+        updatedExpense = { 
+          ...expense, 
+          isPaid: newIsPaid,
+          paidInstallments: paidInstallments
+        };
+      } else {
+        updatedExpense = { ...expense, isPaid: newIsPaid };
+      }
+      
+      const updatedExpenses = state.expenses.map(exp => 
+        exp.id === id ? updatedExpense : exp
+      );
+      
+      dispatch({ type: 'SET_EXPENSES', payload: updatedExpenses });
+      saveToLocalStorage('expenses', updatedExpenses);
+
+      // Atualizar o saldo da conta bancária
+      const account = state.bankAccounts.find(a => a.id === expense.bankAccountId);
+      if (account) {
+        const currentBalance = parseFloat(account.balance || 0);
+        
+        if (expense.isRecurring && expense.installments > 1) {
+          // Se é parcelado, calcular apenas o valor restante
+          const totalAmount = parseFloat(expense.amount || 0);
+          const installmentAmount = totalAmount / expense.installments;
+          
+          // Verificar quantas parcelas já estavam pagas antes
+          const currentPaidInstallments = expense.paidInstallments || Array(expense.installments).fill(false);
+          const previouslyPaidCount = currentPaidInstallments.filter(paid => paid).length;
+          
+          let newBalance;
+          if (newIsPaid) {
+            // Se marcou como pago, desconta apenas o valor das parcelas pendentes
+            const remainingInstallments = expense.installments - previouslyPaidCount;
+            const amountToDeduct = remainingInstallments * installmentAmount;
+            newBalance = currentBalance - Math.abs(amountToDeduct);
+          } else {
+            // Se marcou como pendente, restaura apenas o valor das parcelas que estavam pagas
+            const amountToRestore = previouslyPaidCount * installmentAmount;
+            newBalance = currentBalance + Math.abs(amountToRestore);
+          }
+          
+          const updatedAccount = { ...account, balance: newBalance.toString() };
+          const updatedBankAccounts = state.bankAccounts.map(a => 
+            a.id === expense.bankAccountId ? updatedAccount : a
+          );
+          
+          dispatch({ type: 'SET_BANK_ACCOUNTS', payload: updatedBankAccounts });
+          saveToLocalStorage('bankAccounts', updatedBankAccounts);
+        } else {
+          // Se não é parcelado, usar o valor total
+          const amountToProcess = parseFloat(expense.amount || 0);
+          
+          let newBalance;
+          if (newIsPaid) {
+            newBalance = currentBalance - Math.abs(amountToProcess);
+          } else {
+            newBalance = currentBalance + Math.abs(amountToProcess);
+          }
+          
+          const updatedAccount = { ...account, balance: newBalance.toString() };
+          const updatedBankAccounts = state.bankAccounts.map(a => 
+            a.id === expense.bankAccountId ? updatedAccount : a
+          );
+          
+          dispatch({ type: 'SET_BANK_ACCOUNTS', payload: updatedBankAccounts });
+          saveToLocalStorage('bankAccounts', updatedBankAccounts);
+        }
+      }
+    } else if (expense) {
+      // Se não tem conta bancária (ex: dinheiro em espécie), apenas atualiza o status
+      const updatedExpense = { ...expense, isPaid: !expense.isPaid };
+      const updatedExpenses = state.expenses.map(exp => 
+        exp.id === id ? updatedExpense : exp
+      );
+      
+      dispatch({ type: 'SET_EXPENSES', payload: updatedExpenses });
+      saveToLocalStorage('expenses', updatedExpenses);
+    }
+  };
+
+  // Função para alternar status de uma parcela específica
+  const toggleInstallmentPaid = (id, installmentIndex) => {
+    const expense = state.expenses.find(expense => expense.id === id);
+    if (expense && expense.bankAccountId && expense.bankAccountId !== 'cash' && expense.isRecurring && expense.installments > 1) {
+      // Inicializar array de parcelas se não existir
+      const currentInstallments = expense.paidInstallments || Array(expense.installments).fill(false);
+      const updatedInstallments = [...currentInstallments];
+      const wasPaid = updatedInstallments[installmentIndex];
+      updatedInstallments[installmentIndex] = !wasPaid;
+      
+      // Calcular quantas parcelas estão pagas
+      const paidCount = updatedInstallments.filter(paid => paid).length;
+      const isFullyPaid = paidCount === expense.installments;
+      
+      const updatedExpense = { 
+        ...expense, 
+        paidInstallments: updatedInstallments,
+        isPaid: isFullyPaid
+      };
+      
+      const updatedExpenses = state.expenses.map(exp => 
+        exp.id === id ? updatedExpense : exp
+      );
+      
+      dispatch({ type: 'SET_EXPENSES', payload: updatedExpenses });
+      saveToLocalStorage('expenses', updatedExpenses);
+
+      // Atualizar o saldo da conta bancária apenas para esta parcela
+      const account = state.bankAccounts.find(a => a.id === expense.bankAccountId);
+      if (account) {
+        const currentBalance = parseFloat(account.balance || 0);
+        const totalAmount = parseFloat(expense.amount || 0);
+        const installmentAmount = totalAmount / expense.installments;
+        
+        let newBalance;
+        if (!wasPaid) {
+          // Se estava pendente e agora está paga, desconta o valor da parcela
+          newBalance = currentBalance - Math.abs(installmentAmount);
+        } else {
+          // Se estava paga e agora está pendente, restaura o valor da parcela
+          newBalance = currentBalance + Math.abs(installmentAmount);
+        }
+        
+        const updatedAccount = { ...account, balance: newBalance.toString() };
+        const updatedBankAccounts = state.bankAccounts.map(a => 
+          a.id === expense.bankAccountId ? updatedAccount : a
+        );
+        
+        dispatch({ type: 'SET_BANK_ACCOUNTS', payload: updatedBankAccounts });
+        saveToLocalStorage('bankAccounts', updatedBankAccounts);
+      }
+    }
+  };
+
+  // Funções para gerenciar dívidas
   const addDebt = (debt) => {
-    const id = debts.length > 0 ? Math.max(...debts.map(d => d.id)) + 1 : 1;
-    setDebts([...debts, { ...debt, id, isPaid: false }]);
+    const newDebt = {
+      ...debt,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString()
+    };
+    const updatedDebts = [...state.debts, newDebt];
+    dispatch({ type: 'SET_DEBTS', payload: updatedDebts });
+    saveToLocalStorage('debts', updatedDebts);
   };
 
-  const updateDebt = (id, updatedDebt) => {
-    setDebts(debts.map(debt => 
-      debt.id === id ? { ...updatedDebt, id } : debt
-    ));
+  const updateDebt = (id, updates) => {
+    const updatedDebts = state.debts.map(debt =>
+      debt.id === id ? { ...debt, ...updates } : debt
+    );
+    dispatch({ type: 'SET_DEBTS', payload: updatedDebts });
+    saveToLocalStorage('debts', updatedDebts);
   };
 
   const deleteDebt = (id) => {
-    setDebts(debts.filter(debt => debt.id !== id));
+    const updatedDebts = state.debts.filter(debt => debt.id !== id);
+    dispatch({ type: 'SET_DEBTS', payload: updatedDebts });
+    saveToLocalStorage('debts', updatedDebts);
   };
 
-  // Funções para manipular contas fixas
-  const addFixedBill = (bill) => {
-    const id = fixedBills.length > 0 ? Math.max(...fixedBills.map(b => b.id)) + 1 : 1;
-    setFixedBills([...fixedBills, { ...bill, id, isPaid: false }]);
+  // Funções para gerenciar contas fixas
+  const addFixedBill = (fixedBill) => {
+    const newFixedBill = {
+      ...fixedBill,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString()
+    };
+    const updatedFixedBills = [...state.fixedBills, newFixedBill];
+    dispatch({ type: 'SET_FIXED_BILLS', payload: updatedFixedBills });
+    saveToLocalStorage('fixedBills', updatedFixedBills);
   };
 
-  const updateFixedBill = (id, updatedBill) => {
-    setFixedBills(fixedBills.map(bill => 
-      bill.id === id ? { ...updatedBill, id } : bill
-    ));
+  const updateFixedBill = (id, updates) => {
+    const updatedFixedBills = state.fixedBills.map(fixedBill =>
+      fixedBill.id === id ? { ...fixedBill, ...updates } : debt
+    );
+    dispatch({ type: 'SET_FIXED_BILLS', payload: updatedFixedBills });
+    saveToLocalStorage('fixedBills', updatedFixedBills);
   };
 
   const deleteFixedBill = (id) => {
-    setFixedBills(fixedBills.filter(bill => bill.id !== id));
+    const updatedFixedBills = state.fixedBills.filter(fixedBill => fixedBill.id !== id);
+    dispatch({ type: 'SET_FIXED_BILLS', payload: updatedFixedBills });
+    saveToLocalStorage('fixedBills', updatedFixedBills);
   };
 
-  const toggleFixedBillPaid = (id) => {
-    setFixedBills(fixedBills.map(bill => 
-      bill.id === id ? { ...bill, isPaid: !bill.isPaid } : bill
-    ));
+  // Funções para gerenciar poupanças
+  const addSaving = (saving) => {
+    const newSaving = {
+      ...saving,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString()
+    };
+    const updatedSavings = [...state.savings, newSaving];
+    dispatch({ type: 'SET_SAVINGS', payload: updatedSavings });
+    saveToLocalStorage('savings', updatedSavings);
   };
 
-  // Funções para manipular metas de economia
-  const addSavingsGoal = (goal) => {
-    const id = savingsGoals.length > 0 ? Math.max(...savingsGoals.map(g => g.id)) + 1 : 1;
-    setSavingsGoals([...savingsGoals, { ...goal, id }]);
+  const updateSaving = (id, updates) => {
+    const updatedSavings = state.savings.map(saving =>
+      saving.id === id ? { ...saving, ...updates } : saving
+    );
+    dispatch({ type: 'SET_SAVINGS', payload: updatedSavings });
+    saveToLocalStorage('savings', updatedSavings);
   };
 
-  const updateSavingsGoal = (id, updatedGoal) => {
-    setSavingsGoals(savingsGoals.map(goal => 
-      goal.id === id ? { ...updatedGoal, id } : goal
-    ));
+  const deleteSaving = (id) => {
+    const updatedSavings = state.savings.filter(saving => saving.id !== id);
+    dispatch({ type: 'SET_SAVINGS', payload: updatedSavings });
+    saveToLocalStorage('savings', updatedSavings);
   };
 
-  const deleteSavingsGoal = (id) => {
-    setSavingsGoals(savingsGoals.filter(goal => goal.id !== id));
-  };
-
-  const addAmountToSavingsGoal = (id, amount) => {
-    setSavingsGoals(savingsGoals.map(goal => {
-      if (goal.id === id) {
-        const newAmount = parseFloat(goal.currentAmount) + parseFloat(amount);
-        return { 
-          ...goal, 
-          currentAmount: newAmount > goal.targetAmount ? goal.targetAmount : newAmount 
-        };
-      }
-      return goal;
-    }));
-  };
-
-  // Funções para manipular saldo em conta (atualizadas para usar contas bancárias)
-  const addTransaction = (transaction) => {
-    const id = accountBalance.transactions.length > 0 
-      ? Math.max(...accountBalance.transactions.map(t => t.id)) + 1 
-      : 1;
+  // Funções para gerenciar contas bancárias
+  const addBankAccount = (bankAccount) => {
+    const newBankAccount = {
+      ...bankAccount,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString()
+    };
     
-    const newTransaction = { ...transaction, id, date: new Date().toISOString() };
-    const amount = parseFloat(transaction.amount);
-    
-    // Atualizar saldo da conta bancária selecionada
-    if (transaction.bankAccountId) {
-      updateBankAccountBalance(transaction.bankAccountId, amount);
+    // Se for a primeira conta, definir como padrão
+    if (state.bankAccounts.length === 0) {
+      newBankAccount.isDefault = true;
     }
     
-    setAccountBalance(prev => ({
-      currentBalance: prev.currentBalance + amount,
-      transactions: [...prev.transactions, newTransaction]
-    }));
-  };
-
-  const updateTransaction = (id, updatedTransaction) => {
-    setAccountBalance(prev => {
-      const oldTransaction = prev.transactions.find(t => t.id === id);
-      const oldAmount = parseFloat(oldTransaction.amount);
-      const newAmount = parseFloat(updatedTransaction.amount);
-      
-      // Reverter mudança na conta bancária antiga
-      if (oldTransaction.bankAccountId) {
-        updateBankAccountBalance(oldTransaction.bankAccountId, -oldAmount);
-      }
-      
-      // Aplicar mudança na nova conta bancária
-      if (updatedTransaction.bankAccountId) {
-        updateBankAccountBalance(updatedTransaction.bankAccountId, newAmount);
-      }
-      
-      return {
-        currentBalance: prev.currentBalance - oldAmount + newAmount,
-        transactions: prev.transactions.map(transaction => 
-          transaction.id === id ? { ...updatedTransaction, id } : transaction
-        )
-      };
-    });
-  };
-
-  const deleteTransaction = (id) => {
-    setAccountBalance(prev => {
-      const transaction = prev.transactions.find(t => t.id === id);
-      const amount = parseFloat(transaction.amount);
-      
-      // Reverter mudança na conta bancária
-      if (transaction.bankAccountId) {
-        updateBankAccountBalance(transaction.bankAccountId, -amount);
-      }
-      
-      return {
-        currentBalance: prev.currentBalance - amount,
-        transactions: prev.transactions.filter(transaction => transaction.id !== id)
-      };
-    });
-  };
-
-  const setInitialBalance = (balance) => {
-    setAccountBalance(prev => ({
-      ...prev,
-      currentBalance: parseFloat(balance)
-    }));
-  };
-
-  // Funções para cálculos e análises
-  const calculateTotalExpenses = (month, year) => {
-    return expenses
-      .filter(expense => {
-        const expenseDate = new Date(expense.date);
-        return (
-          expenseDate.getMonth() + 1 === parseInt(month) && 
-          expenseDate.getFullYear() === parseInt(year)
-        );
-      })
-      .reduce((total, expense) => total + parseFloat(expense.amount), 0);
-  };
-
-  const calculateTotalDebts = () => {
-    return debts.reduce((total, debt) => total + parseFloat(debt.remainingAmount), 0);
-  };
-
-  const calculateTotalFixedBills = () => {
-    return fixedBills.reduce((total, bill) => total + parseFloat(bill.amount), 0);
-  };
-
-  const calculateTotalSavings = () => {
-    return savingsGoals.reduce((total, goal) => total + parseFloat(goal.currentAmount), 0);
-  };
-
-  const getExpensesByCategory = (month, year) => {
-    const filteredExpenses = expenses.filter(expense => {
-      const expenseDate = new Date(expense.date);
-      return (
-        expenseDate.getMonth() + 1 === parseInt(month) && 
-        expenseDate.getFullYear() === parseInt(year)
-      );
-    });
-
-    const categories = {};
+    const updatedBankAccounts = [...state.bankAccounts, newBankAccount];
+    dispatch({ type: 'SET_BANK_ACCOUNTS', payload: updatedBankAccounts });
+    saveToLocalStorage('bankAccounts', updatedBankAccounts);
     
-    filteredExpenses.forEach(expense => {
-      if (!categories[expense.category]) {
-        categories[expense.category] = 0;
-      }
-      categories[expense.category] += parseFloat(expense.amount);
-    });
-
-    return categories;
+    // Se for a primeira conta, definir como selecionada
+    if (state.bankAccounts.length === 0) {
+      dispatch({ type: 'SET_SELECTED_ACCOUNT', payload: newBankAccount.id });
+      saveToLocalStorage('selectedAccount', newBankAccount.id);
+    }
   };
 
-  // Funções específicas para o calendário
-  const getBillsForDate = (date) => {
-    const dateString = date.toISOString().split('T')[0];
-    
-    const fixedBillsForDate = fixedBills
-      .filter(bill => bill.dueDate === dateString)
-      .map(bill => ({ ...bill, type: 'fixed' }));
-    
-    const debtsForDate = debts
-      .filter(debt => debt.dueDate === dateString)
-      .map(debt => ({ ...debt, type: 'debt' }));
-
-    const financialEntriesForDate = financialEntries
-      .filter(entry => entry.dueDate === dateString)
-      .map(entry => ({ ...entry, type: 'financial' }));
-
-    return [...fixedBillsForDate, ...debtsForDate, ...financialEntriesForDate];
+  const updateBankAccount = (id, updates) => {
+    const updatedBankAccounts = state.bankAccounts.map(account =>
+      account.id === id ? { ...account, ...updates } : account
+    );
+    dispatch({ type: 'SET_BANK_ACCOUNTS', payload: updatedBankAccounts });
+    saveToLocalStorage('bankAccounts', updatedBankAccounts);
   };
 
-  const getOverdueBills = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  const deleteBankAccount = (id) => {
+    const accountToDelete = state.bankAccounts.find(account => account.id === id);
     
-    const overdueFixedBills = fixedBills
-      .filter(bill => !bill.isPaid && new Date(bill.dueDate) < today)
-      .map(bill => ({ ...bill, type: 'fixed' }));
+    // Não permitir deletar se for a única conta
+    if (state.bankAccounts.length === 1) {
+      alert('Não é possível deletar a única conta. Adicione outra conta primeiro.');
+      return;
+    }
     
-    const overdueDebts = debts
-      .filter(debt => !debt.isPaid && new Date(debt.dueDate) < today)
-      .map(debt => ({ ...debt, type: 'debt' }));
-
-    const overdueFinancialEntries = financialEntries
-      .filter(entry => !entry.isPaid && new Date(entry.dueDate) < today)
-      .map(entry => ({ ...entry, type: 'financial' }));
-
-    return [...overdueFixedBills, ...overdueDebts, ...overdueFinancialEntries];
+    const updatedBankAccounts = state.bankAccounts.filter(account => account.id !== id);
+    
+    // Se a conta deletada era a padrão, definir a primeira restante como padrão
+    if (accountToDelete.isDefault) {
+      updatedBankAccounts[0].isDefault = true;
+    }
+    
+    dispatch({ type: 'SET_BANK_ACCOUNTS', payload: updatedBankAccounts });
+    saveToLocalStorage('bankAccounts', updatedBankAccounts);
+    
+    // Se a conta deletada era a selecionada, selecionar a primeira disponível
+    if (state.selectedAccount === id) {
+      const newSelectedAccount = updatedBankAccounts[0]?.id || '';
+      dispatch({ type: 'SET_SELECTED_ACCOUNT', payload: newSelectedAccount });
+      saveToLocalStorage('selectedAccount', newSelectedAccount);
+    }
   };
 
-  const getUpcomingBills = (days = 7) => {
-    const today = new Date();
-    const futureDate = new Date();
-    futureDate.setDate(today.getDate() + days);
-    
-    const upcomingFixedBills = fixedBills
-      .filter(bill => !bill.isPaid && new Date(bill.dueDate) >= today && new Date(bill.dueDate) <= futureDate)
-      .map(bill => ({ ...bill, type: 'fixed' }));
-    
-    const upcomingDebts = debts
-      .filter(debt => !debt.isPaid && new Date(debt.dueDate) >= today && new Date(debt.dueDate) <= futureDate)
-      .map(debt => ({ ...debt, type: 'debt' }));
-
-    const upcomingFinancialEntries = financialEntries
-      .filter(entry => !entry.isPaid && new Date(entry.dueDate) >= today && new Date(entry.dueDate) <= futureDate)
-      .map(entry => ({ ...entry, type: 'financial' }));
-
-    return [...upcomingFixedBills, ...upcomingDebts, ...upcomingFinancialEntries];
+  // Funções para gerenciar seleções
+  const setSelectedAccount = (accountId) => {
+    dispatch({ type: 'SET_SELECTED_ACCOUNT', payload: accountId });
+    saveToLocalStorage('selectedAccount', accountId);
   };
 
-  // Valor fornecido pelo contexto
+  const setSelectedMonth = (month) => {
+    dispatch({ type: 'SET_SELECTED_MONTH', payload: month });
+  };
+
+  const setSelectedYear = (year) => {
+    dispatch({ type: 'SET_SELECTED_YEAR', payload: year });
+  };
+
+  // Funções para resetar formulários
+  const resetNewExpense = () => {
+    dispatch({ type: 'RESET_NEW_EXPENSE' });
+  };
+
+  const resetNewDebt = () => {
+    dispatch({ type: 'RESET_NEW_DEBT' });
+  };
+
+  const resetNewFixedBill = () => {
+    dispatch({ type: 'RESET_NEW_FIXED_BILL' });
+  };
+
+  const resetNewSaving = () => {
+    dispatch({ type: 'RESET_NEW_SAVING' });
+  };
+
+  const resetNewBankAccount = () => {
+    dispatch({ type: 'RESET_NEW_BANK_ACCOUNT' });
+  };
+
+  // Funções para atualizar formulários
+  const setNewExpense = (updates) => {
+    dispatch({ type: 'SET_NEW_EXPENSE', payload: { ...state.newExpense, ...updates } });
+  };
+
+  const setNewDebt = (updates) => {
+    dispatch({ type: 'SET_NEW_DEBT', payload: { ...state.newDebt, ...updates } });
+  };
+
+  const setNewFixedBill = (updates) => {
+    dispatch({ type: 'SET_NEW_FIXED_BILL', payload: { ...state.newFixedBill, ...updates } });
+  };
+
+  const setNewSaving = (updates) => {
+    dispatch({ type: 'SET_NEW_SAVING', payload: { ...state.newSaving, ...updates } });
+  };
+
+  const setNewBankAccount = (updates) => {
+    dispatch({ type: 'SET_NEW_BANK_ACCOUNT', payload: { ...state.newBankAccount, ...updates } });
+  };
+
   const value = {
-    expenses,
-    debts,
-    fixedBills,
-    savingsGoals,
-    accountBalance,
-    bankAccounts,
-    financialEntries,
-    isLoading,
-    lastSync,
-    syncError,
-    syncRetryCount,
+    ...state,
     addExpense,
     updateExpense,
     deleteExpense,
+    toggleExpensePaid,
+    toggleInstallmentPaid,
     addDebt,
     updateDebt,
     deleteDebt,
     addFixedBill,
     updateFixedBill,
     deleteFixedBill,
-    toggleFixedBillPaid,
-    addSavingsGoal,
-    updateSavingsGoal,
-    deleteSavingsGoal,
-    addAmountToSavingsGoal,
-    addTransaction,
-    updateTransaction,
-    deleteTransaction,
-    setInitialBalance,
+    addSaving,
+    updateSaving,
+    deleteSaving,
     addBankAccount,
     updateBankAccount,
     deleteBankAccount,
-    setDefaultBankAccount,
-    updateBankAccountBalance,
-    getDefaultBankAccount,
-    getTotalBankBalance,
-    addFinancialEntry,
-    updateFinancialEntry,
-    deleteFinancialEntry,
-    toggleFinancialEntryPaid,
-    calculateTotalExpenses,
-    calculateTotalDebts,
-    calculateTotalFixedBills,
-    calculateTotalSavings,
-    getExpensesByCategory,
-    getBillsForDate,
-    getOverdueBills,
-    getUpcomingBills,
-    forceSync
+    setSelectedAccount,
+    setSelectedMonth,
+    setSelectedYear,
+    resetNewExpense,
+    resetNewDebt,
+    resetNewFixedBill,
+    resetNewSaving,
+    resetNewBankAccount,
+    setNewExpense,
+    setNewDebt,
+    setNewFixedBill,
+    setNewSaving,
+    setNewBankAccount
   };
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
-};
+  return (
+    <AppContext.Provider value={value}>
+      {children}
+    </AppContext.Provider>
+  );
+}
+
+// Hook para usar o contexto
+export function useApp() {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useApp deve ser usado dentro de um AppProvider');
+  }
+  return context;
+}

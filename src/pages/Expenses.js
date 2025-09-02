@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { useAppContext } from '../context/AppContext';
+import { useApp } from '../context/AppContext';
 import useAlert from '../hooks/useAlert';
 import Alert from '../components/Alert';
 
 function Expenses() {
   // Usar o contexto global para acessar as despesas
-  const { expenses, addExpense, updateExpense, deleteExpense } = useAppContext();
+  const { expenses, addExpense, updateExpense, deleteExpense } = useApp();
   
   // Hook para gerenciar alertas
   const { alert, showDeleteConfirm, showEditConfirm, showSuccess, showError, hideAlert } = useAlert();

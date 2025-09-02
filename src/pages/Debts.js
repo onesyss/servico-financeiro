@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon, CalendarIcon } from '@heroicons/react/24/outline';
-import { useAppContext } from '../context/AppContext';
+import { useApp } from '../context/AppContext';
 import useAlert from '../hooks/useAlert';
 import Alert from '../components/Alert';
 
 function Debts() {
   // Usar o contexto global para acessar as dívidas
-  const { debts, addDebt, updateDebt, deleteDebt, addFixedBill } = useAppContext();
+  const { debts, addDebt, updateDebt, deleteDebt, addFixedBill } = useApp();
   
   // Hook para gerenciar alertas
   const { alert, showDeleteConfirm, showEditConfirm, showSuccess, showError, hideAlert } = useAlert();

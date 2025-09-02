@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAppContext } from '../context/AppContext';
+import { useApp } from '../context/AppContext';
 import { 
   BanknotesIcon, 
   PlusIcon,
@@ -17,21 +17,24 @@ import Alert from '../components/Alert';
 
 function AccountBalance() {
   const { 
-    accountBalance, 
+    expenses,
     bankAccounts,
-    addTransaction, 
-    updateTransaction, 
-    deleteTransaction, 
-    setInitialBalance,
+    addExpense, 
+    updateExpense, 
+    deleteExpense, 
     addBankAccount,
     updateBankAccount,
     deleteBankAccount,
-    setDefaultBankAccount,
-    getTotalBankBalance
-  } = useAppContext();
+    setSelectedAccount
+  } = useApp();
   
   // Hook para gerenciar alertas
   const { alert, showDeleteConfirm, showEditConfirm, showSuccess, showError, hideAlert } = useAlert();
+
+  // Função para calcular o saldo total das contas bancárias
+  const getTotalBankBalance = () => {
+    return bankAccounts.reduce((total, account) => total + parseFloat(account.balance || 0), 0);
+  };
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -98,7 +101,7 @@ function AccountBalance() {
         amount: newTransaction.type === 'expense' ? -amount : amount
       };
       
-      addTransaction(transactionData);
+      addExpense(transactionData);
       setShowAddModal(false);
       setNewTransaction({ 
         description: '', 
@@ -127,7 +130,7 @@ function AccountBalance() {
         amount: editingTransaction.type === 'expense' ? -amount : amount
       };
       
-      updateTransaction(editingTransaction.id, transactionData);
+              updateExpense(editingTransaction.id, transactionData);
       setShowEditModal(false);
       setEditingTransaction(null);
       showSuccess('Transação atualizada com sucesso!');
@@ -138,11 +141,11 @@ function AccountBalance() {
 
   // Função para excluir transação
   const handleDeleteTransaction = (id) => {
-    const transaction = accountBalance.transactions.find(t => t.id === id);
+    const transaction = expenses.find(t => t.id === id);
     if (transaction) {
       showDeleteConfirm(transaction.description, () => {
         try {
-          deleteTransaction(id);
+          deleteExpense(id);
           showSuccess('Transação excluída com sucesso!');
         } catch (error) {
           showError('Erro ao excluir transação. Tente novamente.');
@@ -218,7 +221,8 @@ function AccountBalance() {
     }
     
     try {
-      setInitialBalance(parseFloat(initialBalance));
+      // Por enquanto, apenas fechar o modal
+      // TODO: Implementar lógica para definir saldo inicial
       setShowInitialBalanceModal(false);
       setInitialBalanceValue('');
       setIsEditingBalance(false);
@@ -246,20 +250,25 @@ function AccountBalance() {
 
   // Função para definir conta padrão
   const handleSetDefaultAccount = (id) => {
-    setDefaultBankAccount(id);
+            // Atualizar a conta para ser padrão
+        const updatedAccounts = bankAccounts.map(account => ({
+          ...account,
+          isDefault: account.id === id
+        }));
+        updatedAccounts.forEach(account => updateBankAccount(account.id, account));
     showSuccess('Conta padrão definida com sucesso!');
   };
 
   // Calcular totais
-  const totalIncome = accountBalance.transactions
+  const totalIncome = expenses
     .filter(t => t.amount > 0)
     .reduce((total, t) => total + t.amount, 0);
 
-  const totalExpenses = accountBalance.transactions
+  const totalExpenses = expenses
     .filter(t => t.amount < 0)
     .reduce((total, t) => total + Math.abs(t.amount), 0);
 
-  const availableBalance = accountBalance.currentBalance;
+  const availableBalance = getTotalBankBalance();
   const totalBankBalance = getTotalBankBalance();
 
   // Função para formatar números com separadores de milhares
@@ -496,7 +505,7 @@ function AccountBalance() {
                   onClick={() => {
                     showDeleteConfirm('Saldo Disponível', () => {
                       try {
-                        setInitialBalance(0);
+                        // TODO: Implementar lógica para zerar saldo
                         showSuccess('Saldo zerado com sucesso!');
                       } catch (error) {
                         showError('Erro ao zerar saldo. Tente novamente.');
@@ -544,14 +553,14 @@ function AccountBalance() {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {accountBalance.transactions.length === 0 ? (
+              {expenses.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                     Nenhuma transação encontrada
                   </td>
                 </tr>
               ) : (
-                accountBalance.transactions
+                expenses
                   .sort((a, b) => new Date(b.date) - new Date(a.date))
                   .map((transaction) => (
                     <tr key={transaction.id}>

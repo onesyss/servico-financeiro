@@ -14,10 +14,10 @@ import ResetPassword from './pages/ResetPassword';
 import EmailVerification from './pages/EmailVerification';
 import Profile from './pages/Profile';
 import Support from './pages/Support';
-import SyncNotification from './components/SyncNotification';
+
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { AppProvider, useAppContext } from './context/AppContext';
+import { AppProvider, useApp } from './context/AppContext';
 
 function App() {
   return (
@@ -51,8 +51,6 @@ function AuthenticatedApp() {
 }
 
 function AuthenticatedRoutes() {
-  const { isLoading, lastSync } = useAppContext();
-
   return (
     <>
       <Routes>
@@ -72,7 +70,6 @@ function AuthenticatedRoutes() {
           <Route path="profile" element={<Profile />} />
         </Route>
       </Routes>
-      <SyncNotification isLoading={isLoading} lastSync={lastSync} />
     </>
   );
 }

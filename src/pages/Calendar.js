@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAppContext } from '../context/AppContext';
+import { useApp } from '../context/AppContext';
 import { 
   CalendarIcon, 
   ExclamationTriangleIcon,
@@ -23,7 +23,7 @@ function Calendar() {
     getBillsForDate,
     getOverdueBills,
     getUpcomingBills
-  } = useAppContext();
+  } = useApp();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
