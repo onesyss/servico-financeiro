@@ -121,7 +121,31 @@ function Dashboard() {
   };
 
   const getTotalBankBalance = () => {
-    return bankAccounts.reduce((total, account) => total + parseFloat(account.balance || 0), 0);
+    return bankAccounts.reduce((total, account) => {
+      const balance = parseFloat(account.balance || 0);
+      // Considerar apenas saldos positivos (contas com dinheiro disponível)
+      return total + (balance > 0 ? balance : 0);
+    }, 0);
+  };
+
+  // Função para calcular o saldo total real (apenas contas bancárias, sem entradas diretas)
+  const getRealBankBalance = () => {
+    // Calcular apenas o saldo das contas bancárias (sem considerar transações)
+    const bankAccountsBalance = bankAccounts.reduce((total, account) => {
+      const balance = parseFloat(account.balance || 0);
+      return total + balance;
+    }, 0);
+
+    // Calcular o total de transações vinculadas a contas bancárias
+    const linkedTransactionsBalance = expenses.reduce((total, expense) => {
+      if (expense.bankAccountId) {
+        return total + expense.amount;
+      }
+      return total;
+    }, 0);
+
+    // Retornar apenas o saldo das contas bancárias + transações vinculadas
+    return bankAccountsBalance + linkedTransactionsBalance;
   };
 
   const getExpensesByCategory = (month, year) => {

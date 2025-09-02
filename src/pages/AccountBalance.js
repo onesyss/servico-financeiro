@@ -33,7 +33,31 @@ function AccountBalance() {
 
   // Função para calcular o saldo total das contas bancárias
   const getTotalBankBalance = () => {
-    return bankAccounts.reduce((total, account) => total + parseFloat(account.balance || 0), 0);
+    return bankAccounts.reduce((total, account) => {
+      const balance = parseFloat(account.balance || 0);
+      // Considerar apenas saldos positivos (contas com dinheiro disponível)
+      return total + (balance > 0 ? balance : 0);
+    }, 0);
+  };
+
+  // Função para calcular o saldo total real (apenas contas bancárias, sem entradas diretas)
+  const getRealBankBalance = () => {
+    // Calcular apenas o saldo das contas bancárias (sem considerar transações)
+    const bankAccountsBalance = bankAccounts.reduce((total, account) => {
+      const balance = parseFloat(account.balance || 0);
+      return total + balance;
+    }, 0);
+
+    // Calcular o total de transações vinculadas a contas bancárias
+    const linkedTransactionsBalance = expenses.reduce((total, expense) => {
+      if (expense.bankAccountId) {
+        return total + expense.amount;
+      }
+      return total;
+    }, 0);
+
+    // Retornar apenas o saldo das contas bancárias + transações vinculadas
+    return bankAccountsBalance + linkedTransactionsBalance;
   };
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -522,17 +546,17 @@ function AccountBalance() {
           </div>
         </div>
 
-        <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
-          <div className="flex items-center">
-            <BuildingLibraryIcon className="w-5 h-5 text-purple-600 dark:text-purple-400 mr-2" />
-            <div>
-                             <h3 className="font-semibold text-purple-800 dark:text-purple-200">Total Bancos</h3>
-               <p className={`text-lg font-bold ${totalBankBalance >= 0 ? 'text-purple-600 dark:text-purple-400' : 'text-red-600 dark:text-red-400'}`}>
-                 {formatCurrency(totalBankBalance)}
-               </p>
-            </div>
-          </div>
-        </div>
+                 <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+           <div className="flex items-center">
+             <BuildingLibraryIcon className="w-5 h-5 text-purple-600 dark:text-purple-400 mr-2" />
+             <div>
+                              <h3 className="font-semibold text-purple-800 dark:text-purple-200">Total Bancos</h3>
+                <p className={`text-lg font-bold ${getRealBankBalance() >= 0 ? 'text-purple-600 dark:text-purple-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {formatCurrency(getRealBankBalance())}
+                </p>
+             </div>
+           </div>
+         </div>
       </div>
 
       {/* Histórico de transações */}

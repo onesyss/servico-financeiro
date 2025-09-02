@@ -143,6 +143,7 @@ export function AppProvider({ children }) {
     }
   };
 
+
   // Funções para gerenciar despesas
   const addExpense = (expense) => {
     const newExpense = {
